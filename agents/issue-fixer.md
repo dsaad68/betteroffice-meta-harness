@@ -28,10 +28,45 @@ check the central claim against the code. Reports have been wrong: one proposed 
 the writer never sees, another missed that lifting a clip breaks hit testing. If the plan does not
 survive contact with the code, say so in your report and do the thing that works.
 
-**2. Cut the worktree** with `wt switch --create fix/pptx-<slug> --base <base SHA> --yes`. It needs
-`--yes`: the post-start hook cannot prompt. Then build the binding from the primary worktree:
-`bash render-improvement-harness/scripts/setup_worktree.sh <worktree path>`. Confirm it prints
-`binding ok` and `render_png present` before trusting any measurement.
+**2. Cut your own worktree.** Do not work in the primary one, and do not ask the session to make it
+for you:
+
+```
+wt switch --create fix/pptx-<slug> --base <base SHA> --yes
+```
+
+`--yes` is required: the project's post-start hooks are approval-gated and cannot prompt in a
+non-interactive shell.
+
+The project config in `.config/wt.toml` already provisions the worktree for you, in two hooks:
+
+- `wt step copy-ignored` carries the gitignored things a new checkout lacks — the Rust `target/`
+  cache, the `.venv`, and the harness's source decks and LibreOffice reference renders, per
+  `.worktreeinclude`. On APFS these are reflink copies, so a full `target/` costs seconds.
+  `node_modules/` is excluded on purpose; run `npm ci` yourself if you touch the TypeScript renderer.
+- `setup_worktree.sh` rebuilds the pptx Python binding so it resolves inside *your* worktree rather
+  than the one the copied `.venv` was built in.
+
+**The hooks run in the background, so they are not finished when the command returns.** Never
+measure against a binding you have not confirmed. Check it resolves to your own path and can
+rasterise:
+
+```
+PYTHONPATH=<worktree>/bindings/python-pptx/python .venv/bin/python -c \
+  "import betteroffice_pptx as b; print(b.__file__, hasattr(b.Presentation,'render_png'))"
+```
+
+If it points anywhere else, or `render_png` is missing, re-run the hook from the primary worktree —
+it is idempotent:
+
+```
+bash render-improvement-harness/scripts/setup_worktree.sh <worktree path>
+```
+
+and wait for `binding ok` and `render_png present`. `wt config state logs` shows what the hooks did.
+
+Leave the worktree in place when you finish; the session needs it to publish. Never
+`wt remove` another agent's.
 
 **3. Implement.** Match the surrounding code. Comments only where the code cannot explain itself —
 prefer explaining *why*, and name the failure the line prevents.

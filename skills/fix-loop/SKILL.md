@@ -49,12 +49,18 @@ same function — check the `files:` frontmatter in each `report.md` for overlap
 
 Mark the row `claimed` in `ORDER.md` before dispatching, so a re-entry does not double-dispatch.
 
+Each agent cuts its own worktree with `wt`, from the run's pinned base SHA. Do not create them
+yourself — the project's `wt` hooks provision the build cache, the Python environment and the decks,
+and an agent that inherited a worktree it did not make will not know what state it is in.
+
 Prompt shape:
 
 ```
-Fix cluster <cluster-id>. Base branch: <base SHA>. Worktree: fix/pptx-<slug>.
+Fix cluster <cluster-id>. Base: <base SHA>. Create your own worktree: fix/pptx-<slug>.
 Relevant learnings: <paste from LEARNING.md, or "none">.
 ```
+
+Give each agent a distinct slug. Two agents cutting the same branch name will collide.
 
 ## 3. Publish (serial, this session)
 
@@ -62,7 +68,9 @@ For each agent that reports back, in `ORDER.md` order:
 
 1. Read its `issue.md`, `pr.md` and diff. Check the claim in `pr.md` against what the diff does.
 2. File the issue with `gh issue create`. Record the number.
-3. Create the `main`-based branch, apply the fix, **run the tests yourself**, push.
+3. Create the `main`-based branch, apply the fix, **run the tests yourself**, push. The agent's
+   worktree is on the run's pinned base, which is usually not `main`: expect to drop files for
+   crates the target branch does not have, and to re-apply anything the base has moved under.
 4. Open the pull request, referencing the issue.
 5. Update the row to `filed` with both numbers, and fold anything the agent left in `TODO.md` into
    `ORDER.md` — a discovered dependency, a cluster that turned out to be two, a blocker.

@@ -58,6 +58,12 @@ choose approaches to shared code that do not compose. So the parallelism sits wh
 — investigation and implementation — and everything with a side effect happens serially, in order,
 from one place.
 
+Each fixer cuts its own worktree through `wt`, so the project's post-start hooks provision it: the
+gitignored build cache, the Python environment and the sample decks are reflink-copied in, and the
+Python binding is rebuilt to resolve inside that worktree rather than the one the copied environment
+came from. The hooks run in the background, so an agent verifies the binding before it trusts a
+measurement.
+
 Ownership is split the same way. `ORDER.md` is the plan and has exactly one writer, the dispatching
 session. `TODO.md` is the shared surface the agents write to as they work, and the session folds it
 back into the plan as it publishes. `LEARNING.md` is appended to across runs, because most of what
