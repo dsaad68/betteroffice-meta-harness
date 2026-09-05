@@ -64,9 +64,10 @@ Python binding is rebuilt to resolve inside that worktree rather than the one th
 came from. The hooks run in the background, so an agent verifies the binding before it trusts a
 measurement.
 
-Ownership is split the same way. `ORDER.md` is the plan and has exactly one writer, the dispatching
-session. `TODO.md` is the shared surface the agents write to as they work, and the session folds it
-back into the plan as it publishes. `LEARNING.md` is appended to across runs, because most of what
+Ownership is split the same way. `ORDER.toml` is the plan and has exactly one writer, the
+dispatching session; `scripts/order.py` computes the merge order from it and renders the issue body,
+so that body is generated rather than hand-maintained. `TODO.md` is the shared surface the agents
+write to as they work, and the session folds it back into the plan as it publishes. `LEARNING.md` is appended to across runs, because most of what
 goes wrong is knowledge that existed only in the last agent's head.
 
 ## Running it
@@ -92,6 +93,7 @@ from it.
 | `templates/` | the report and issue shapes the agents fill in |
 | `docs/` | the dependency-ordered fix plan, the fix loop, and the failure taxonomy |
 | `harness.lock.toml` | the compatible set of skill, agent and script versions |
+| `ORDER.toml` | a fix run's plan: what depends on what, and why (`docs/ORDER-SCHEMA.md`) |
 | `llm.txt` | setup and operating guide for an agent |
 
 ## The two renderers

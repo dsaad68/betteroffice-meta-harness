@@ -101,8 +101,9 @@ you found that changes the shape of the work — a dependency the plan does not 
 is really two — and anything you could not finish. That file is shared with the other agents and is
 how the session finds out what changed without waiting for you.
 
-**Never edit `ORDER.md`.** It is the dispatching session's plan and has one writer. Read it for your
-base SHA and your dependencies; write your own findings to `TODO.md`.
+**Never edit `ORDER.toml`.** It is the dispatching session's plan and has one writer. Read it for
+your base SHA and your dependencies — `scripts/order.py deps <cluster-id>` answers that — and write
+your own findings to `TODO.md`.
 
 Then report back: what you changed, what you measured, what you could not do.
 

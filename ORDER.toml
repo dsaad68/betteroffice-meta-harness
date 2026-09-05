@@ -1,0 +1,469 @@
+# The plan for the current fix run. Schema: docs/ORDER-SCHEMA.md
+# One writer: the dispatching session. Agents write to TODO.md instead.
+version = 1
+base = "b21db5fc95efb7c4530e8f1e397351ad6ac8c5f6"
+
+[[feature]]
+id = "pptx-rasterizer"
+title = "rasterize slides to png"
+status = "filed"
+reason = "crates/pptx-raster is not on main, so any fix touching the raster backend can only ship its non-raster half until this lands"
+[feature.meta]
+pr = 264
+
+[[feature]]
+id = "theme-style-references"
+title = "resolve theme style references"
+status = "filed"
+supersedes = ["shape-style-fontref"]
+reason = "parses a:fmtScheme and resolves the whole fillRef/lnRef/fontRef matrix; also unblocks connector strokes, which need lnRef before they can paint a colour"
+[feature.meta]
+pr = 253
+
+[[fix]]
+id = "hidden-shape-drawn-anyway"
+title = "do not draw shapes marked hidden"
+status = "filed"
+branch = "pr/pptx-hidden-shapes"
+reason = "self-contained; carries p:cNvPr/@hidden through the edit snapshot and guards the renderer"
+[fix.meta]
+report = "render-improvement-harness/issues/hidden-shape-drawn-anyway/report.md"
+evidence = ["render-improvement-harness/issues/hidden-shape-drawn-anyway/evidence-1.png", "render-improvement-harness/issues/hidden-shape-drawn-anyway/evidence-2.png", "render-improvement-harness/issues/hidden-shape-drawn-anyway/evidence-3.png", "render-improvement-harness/issues/hidden-shape-drawn-anyway/evidence-4.png"]
+issue = 268
+pr = 269
+
+[[fix]]
+id = "line-zero-extent-skipped"
+title = "parse connector shapes"
+status = "filed"
+branch = "pr/pptx-connectors"
+reason = "p:cxnSp had no arm in the shape-tree dispatch, so no divider or rule in any deck was drawn; parser and writer change together or saving desynchronises"
+[fix.meta]
+report = "render-improvement-harness/issues/line-zero-extent-skipped/report.md"
+evidence = ["render-improvement-harness/issues/line-zero-extent-skipped/evidence-1.png", "render-improvement-harness/issues/line-zero-extent-skipped/evidence-2.png", "render-improvement-harness/issues/line-zero-extent-skipped/evidence-3.png", "render-improvement-harness/issues/line-zero-extent-skipped/evidence-4.png"]
+issue = 272
+pr = 273
+
+[[fix]]
+id = "line-arrowheads-not-drawn"
+title = "draw line arrowheads"
+status = "filed"
+branch = "pr/pptx-line-arrowheads"
+needs = ["line-zero-extent-skipped"]
+reason = "most arrowheads in real decks sit on connectors, so merged first this looks like a no-op"
+[fix.meta]
+report = "render-improvement-harness/issues/line-arrowheads-not-drawn/report.md"
+evidence = ["render-improvement-harness/issues/line-arrowheads-not-drawn/evidence-1.png", "render-improvement-harness/issues/line-arrowheads-not-drawn/evidence-2.png"]
+issue = 280
+pr = 281
+
+[[fix]]
+id = "fill-alpha-modifier-ignored"
+title = "honour a:alpha on shape fills and outlines"
+status = "filed"
+branch = "pr/pptx-fill-alpha"
+reason = "independent, and one of the largest single wins: an opaque scrim over a photograph blacks out the whole slide"
+[fix.meta]
+report = "render-improvement-harness/issues/fill-alpha-modifier-ignored/report.md"
+evidence = ["render-improvement-harness/issues/fill-alpha-modifier-ignored/evidence-1.png", "render-improvement-harness/issues/fill-alpha-modifier-ignored/evidence-2.png", "render-improvement-harness/issues/fill-alpha-modifier-ignored/evidence-3.png", "render-improvement-harness/issues/fill-alpha-modifier-ignored/evidence-4.png"]
+issue = 274
+pr = 275
+
+[[fix]]
+id = "text-slidenum-field-not-evaluated"
+title = "evaluate the slidenum field"
+status = "filed"
+branch = "pr/pptx-slidenum-field"
+reason = "layout only, no interaction with anything else in the queue"
+[fix.meta]
+report = "render-improvement-harness/issues/text-slidenum-field-not-evaluated/report.md"
+evidence = ["render-improvement-harness/issues/text-slidenum-field-not-evaluated/evidence-1.png", "render-improvement-harness/issues/text-slidenum-field-not-evaluated/evidence-2.png", "render-improvement-harness/issues/text-slidenum-field-not-evaluated/evidence-3.png", "render-improvement-harness/issues/text-slidenum-field-not-evaluated/evidence-4.png"]
+issue = 276
+pr = 277
+
+[[fix]]
+id = "geometry-preset-adj-values-wrong"
+title = "scale preset adjust values off the shortest side"
+status = "filed"
+branch = "pr/pptx-preset-adjust"
+reason = "isolated in one file with no dependants; read the open review comment about .min(0.5) first, which may make it inert in the cases the issue describes"
+[fix.meta]
+report = "render-improvement-harness/issues/geometry-preset-adj-values-wrong/report.md"
+evidence = ["render-improvement-harness/issues/geometry-preset-adj-values-wrong/evidence-1.png", "render-improvement-harness/issues/geometry-preset-adj-values-wrong/evidence-2.png", "render-improvement-harness/issues/geometry-preset-adj-values-wrong/evidence-3.png", "render-improvement-harness/issues/geometry-preset-adj-values-wrong/evidence-4.png"]
+issue = 278
+pr = 279
+
+[[fix]]
+id = "text-run-props-gradfill-not-resolved"
+title = "resolve a run's gradFill instead of dropping it"
+status = "filed"
+branch = "pr/pptx-run-gradfill"
+reason = "independent, and carries a data-loss guard worth reviewing on its own: without it, editing a paragraph would rewrite an authored gradient as flat colour"
+[fix.meta]
+report = "render-improvement-harness/issues/text-run-props-gradfill-not-resolved/report.md"
+evidence = ["render-improvement-harness/issues/text-run-props-gradfill-not-resolved/evidence-1.png", "render-improvement-harness/issues/text-run-props-gradfill-not-resolved/evidence-2.png", "render-improvement-harness/issues/text-run-props-gradfill-not-resolved/evidence-3.png", "render-improvement-harness/issues/text-run-props-gradfill-not-resolved/evidence-4.png"]
+issue = 297
+pr = 299
+
+[[fix]]
+id = "fill-nonsolid-fill-types-not-resolved"
+title = "sort gradient stops before they reach the display list"
+status = "filed"
+branch = "pr/pptx-gradient-stop-order"
+after = ["pptx-rasterizer"]
+reason = "a one-line change clearing four of its cluster's six findings, and a backend parity fix: canvas sorts stops, tiny-skia pins them monotonically, so the same display list renders differently in each"
+[fix.meta]
+report = "render-improvement-harness/issues/fill-nonsolid-fill-types-not-resolved/report.md"
+evidence = ["render-improvement-harness/issues/fill-nonsolid-fill-types-not-resolved/evidence-1.png", "render-improvement-harness/issues/fill-nonsolid-fill-types-not-resolved/evidence-2.png", "render-improvement-harness/issues/fill-nonsolid-fill-types-not-resolved/evidence-3.png", "render-improvement-harness/issues/fill-nonsolid-fill-types-not-resolved/evidence-4.png"]
+issue = 303
+pr = 306
+
+[[fix]]
+id = "chart-dlbls-shown-when-disabled"
+title = "stop synthesising data labels over a dLbls that shows nothing"
+status = "filed"
+branch = "pr/pptx-chart-dlbls"
+reason = "the entry point to the chart work: the other chart clusters all edit the same plot-rectangle arithmetic and must go one at a time, and this one does not touch it"
+[fix.meta]
+report = "render-improvement-harness/issues/chart-dlbls-shown-when-disabled/report.md"
+evidence = ["render-improvement-harness/issues/chart-dlbls-shown-when-disabled/evidence-1.png", "render-improvement-harness/issues/chart-dlbls-shown-when-disabled/evidence-2.png", "render-improvement-harness/issues/chart-dlbls-shown-when-disabled/evidence-3.png", "render-improvement-harness/issues/chart-dlbls-shown-when-disabled/evidence-4.png"]
+issue = 302
+pr = 305
+
+[[fix]]
+id = "fill-grpfill-not-resolved"
+title = "resolve a:grpFill against the enclosing group"
+status = "filed"
+branch = "pr/pptx-grpfill"
+reason = "makes some slides worse on purpose: giving custGeom icons a fill they lacked paints each as its bounding box until the geometry parser lands; judge it on the bar and badge slides"
+[fix.meta]
+report = "render-improvement-harness/issues/fill-grpfill-not-resolved/report.md"
+evidence = ["render-improvement-harness/issues/fill-grpfill-not-resolved/evidence-1.png", "render-improvement-harness/issues/fill-grpfill-not-resolved/evidence-2.png", "render-improvement-harness/issues/fill-grpfill-not-resolved/evidence-3.png", "render-improvement-harness/issues/fill-grpfill-not-resolved/evidence-4.png"]
+issue = 270
+pr = 271
+
+[[fix]]
+id = "geometry-custom-collapses-to-bbox"
+title = "draw custGeom outlines instead of a bounding rectangle"
+status = "filed"
+branch = "pr/pptx-custom-geometry"
+repairs = ["fill-grpfill-not-resolved"]
+reason = "repairs the regression grpFill introduces, and is the single largest visual defect in the corpus on its own"
+[fix.meta]
+report = "render-improvement-harness/issues/geometry-custom-collapses-to-bbox/report.md"
+evidence = ["render-improvement-harness/issues/geometry-custom-collapses-to-bbox/evidence-1.png", "render-improvement-harness/issues/geometry-custom-collapses-to-bbox/evidence-2.png", "render-improvement-harness/issues/geometry-custom-collapses-to-bbox/evidence-3.png", "render-improvement-harness/issues/geometry-custom-collapses-to-bbox/evidence-4.png"]
+issue = 284
+pr = 285
+
+[[fix]]
+id = "picture-srcrect-crop-ignored"
+title = "apply a picture's srcRect crop and its own preset mask"
+status = "filed"
+branch = "pr/pptx-picture-crop"
+after = ["pptx-rasterizer"]
+reason = "independent of everything above; ships complete once the rasterizer lands, since the masking half cannot target main"
+[fix.meta]
+report = "render-improvement-harness/issues/picture-srcrect-crop-ignored/report.md"
+evidence = ["render-improvement-harness/issues/picture-srcrect-crop-ignored/evidence-1.png", "render-improvement-harness/issues/picture-srcrect-crop-ignored/evidence-2.png", "render-improvement-harness/issues/picture-srcrect-crop-ignored/evidence-3.png", "render-improvement-harness/issues/picture-srcrect-crop-ignored/evidence-4.png"]
+issue = 287
+pr = 288
+
+[[fix]]
+id = "text-run-props-bold-ignored"
+title = "keep weight and slant when substituting a missing font"
+status = "filed"
+branch = "pr/pptx-font-fallback-style"
+reason = "first of the text-metrics chain; every change from here alters glyph advances on every deck, so they land one at a time or each invalidates the other's measurements"
+[fix.meta]
+report = "render-improvement-harness/issues/text-run-props-bold-ignored/report.md"
+evidence = ["render-improvement-harness/issues/text-run-props-bold-ignored/evidence-1.png", "render-improvement-harness/issues/text-run-props-bold-ignored/evidence-2.png", "render-improvement-harness/issues/text-run-props-bold-ignored/evidence-3.png", "render-improvement-harness/issues/text-run-props-bold-ignored/evidence-4.png"]
+issue = 266
+pr = 267
+
+[[fix]]
+id = "text-font-substitution-issues"
+title = 'resolve "+mj-lt" to the theme major font'
+status = "filed"
+branch = "pr/pptx-theme-major-font"
+needs = ["text-run-props-bold-ignored"]
+reason = "edits the same resolve_face chain, and its substitution step is ordered against that fallback"
+[fix.meta]
+report = "render-improvement-harness/issues/text-font-substitution-issues/report.md"
+evidence = ["render-improvement-harness/issues/text-font-substitution-issues/evidence-1.png", "render-improvement-harness/issues/text-font-substitution-issues/evidence-2.png", "render-improvement-harness/issues/text-font-substitution-issues/evidence-3.png", "render-improvement-harness/issues/text-font-substitution-issues/evidence-4.png"]
+issue = 290
+pr = 291
+
+[[fix]]
+id = "text-inheritance-layout-lststyle-ignored"
+title = "apply a shape's lstStyle and draw its buChar bullets"
+status = "filed"
+branch = "pr/pptx-lststyle-bullets"
+reason = "the numbers get worse before they get better: text becomes correct and larger, so a separate clipping defect hides more of it"
+[fix.meta]
+report = "render-improvement-harness/issues/text-inheritance-layout-lststyle-ignored/report.md"
+evidence = ["render-improvement-harness/issues/text-inheritance-layout-lststyle-ignored/evidence-1.png", "render-improvement-harness/issues/text-inheritance-layout-lststyle-ignored/evidence-2.png", "render-improvement-harness/issues/text-inheritance-layout-lststyle-ignored/evidence-3.png", "render-improvement-harness/issues/text-inheritance-layout-lststyle-ignored/evidence-4.png"]
+issue = 292
+pr = 294
+
+[[fix]]
+id = "text-overflow-autofit-not-handled"
+title = "stop clipping overflowing text and stop shrinking spAutoFit"
+status = "filed"
+branch = "pr/pptx-text-overflow"
+repairs = ["text-inheritance-layout-lststyle-ignored"]
+after = ["pptx-rasterizer"]
+reason = "turns the lstStyle change from a metric regression into a win, and is three defects in one deliberately: lifting the clip alone took the corpus from 6 regressed slides to 32"
+[fix.meta]
+report = "render-improvement-harness/issues/text-overflow-autofit-not-handled/report.md"
+evidence = ["render-improvement-harness/issues/text-overflow-autofit-not-handled/evidence-1.png", "render-improvement-harness/issues/text-overflow-autofit-not-handled/evidence-2.png", "render-improvement-harness/issues/text-overflow-autofit-not-handled/evidence-3.png", "render-improvement-harness/issues/text-overflow-autofit-not-handled/evidence-4.png"]
+issue = 293
+pr = 295
+
+[[fix]]
+id = "text-bullets-autonum-not-drawn"
+title = "draw buAutoNum list numbers"
+status = "filed"
+branch = "pr/pptx-autonum-bullets"
+needs = ["text-inheritance-layout-lststyle-ignored"]
+reason = "reuses the marker-emission path; merged first there is nothing to emit through"
+[fix.meta]
+report = "render-improvement-harness/issues/text-bullets-autonum-not-drawn/report.md"
+evidence = ["render-improvement-harness/issues/text-bullets-autonum-not-drawn/evidence-1.png", "render-improvement-harness/issues/text-bullets-autonum-not-drawn/evidence-2.png", "render-improvement-harness/issues/text-bullets-autonum-not-drawn/evidence-3.png", "render-improvement-harness/issues/text-bullets-autonum-not-drawn/evidence-4.png"]
+issue = 298
+pr = 300
+
+[[fix]]
+id = "text-run-props-solidfill-scope-bug"
+title = "scope a positioned run to its source run"
+status = "filed"
+branch = "pr/pptx-run-paint-scope"
+after = ["text-inheritance-layout-lststyle-ignored", "text-bullets-autonum-not-drawn"]
+reason = "correct standalone, but it edits positioned_runs, which the two bullet changes reach through the marker path; last avoids rebasing it three times"
+[fix.meta]
+report = "render-improvement-harness/issues/text-run-props-solidfill-scope-bug/report.md"
+evidence = ["render-improvement-harness/issues/text-run-props-solidfill-scope-bug/evidence-1.png", "render-improvement-harness/issues/text-run-props-solidfill-scope-bug/evidence-2.png", "render-improvement-harness/issues/text-run-props-solidfill-scope-bug/evidence-3.png", "render-improvement-harness/issues/text-run-props-solidfill-scope-bug/evidence-4.png"]
+issue = 301
+pr = 304
+
+[[fix]]
+id = "shape-style-fontref"
+title = "take a run's default text colour from the shape style"
+status = "blocked"
+branch = "fix/pptx-shape-style-fontref"
+reason = "Check one difference before closing: the broader change applies the fontRef colour to non-placeholder shapes, while this one applied it to placeholders too. If that narrowing is deliberate, close outright; if not, the placeholder case is worth carrying over."
+[fix.meta]
+issue = 282
+pr = 283
+
+# ---------------------------------------------------------------------------
+# Found and investigated, not yet worked on. Ranked by impact then effort.
+# `report` and `solution` are paths in the betteroffice working repo; `evidence`
+# images are local only and are never published.
+# ---------------------------------------------------------------------------
+[[fix]]
+id = "unsupported-table-not-rendered"
+title = "DrawingML tables (a:tbl) not rendered at all"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/unsupported-table-not-rendered/report.md"
+evidence = ["render-improvement-harness/issues/unsupported-table-not-rendered/evidence-1.png", "render-improvement-harness/issues/unsupported-table-not-rendered/evidence-2.png", "render-improvement-harness/issues/unsupported-table-not-rendered/evidence-3.png", "render-improvement-harness/issues/unsupported-table-not-rendered/evidence-4.png"]
+impact = "high"
+effort = "hard"
+findings = 19
+decks = 3
+solution = "render-improvement-harness/issues/unsupported-table-not-rendered/possible-solution.md"
+
+[[fix]]
+id = "picture-fill-fails-to-render"
+title = "Picture fails to render at all (EMF/WMF, OLE fallback, one JPEG)"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/picture-fill-fails-to-render/report.md"
+evidence = ["render-improvement-harness/issues/picture-fill-fails-to-render/evidence-1.png", "render-improvement-harness/issues/picture-fill-fails-to-render/evidence-2.png", "render-improvement-harness/issues/picture-fill-fails-to-render/evidence-3.png", "render-improvement-harness/issues/picture-fill-fails-to-render/evidence-4.png"]
+impact = "high"
+effort = "hard"
+findings = 9
+decks = 3
+solution = "render-improvement-harness/issues/picture-fill-fails-to-render/possible-solution.md"
+
+[[fix]]
+id = "text-run-props-spc-ignored"
+title = "Run-level character spacing (spc) ignored"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/text-run-props-spc-ignored/report.md"
+evidence = ["render-improvement-harness/issues/text-run-props-spc-ignored/evidence-1.png", "render-improvement-harness/issues/text-run-props-spc-ignored/evidence-2.png", "render-improvement-harness/issues/text-run-props-spc-ignored/evidence-3.png", "render-improvement-harness/issues/text-run-props-spc-ignored/evidence-4.png"]
+impact = "medium"
+effort = "medium"
+findings = 5
+decks = 4
+solution = "render-improvement-harness/issues/text-run-props-spc-ignored/possible-solution.md"
+
+[[fix]]
+id = "text-layout-master-lnspc-ignored"
+title = "Master title style's reduced line spacing (lnSpc) not applied"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/text-layout-master-lnspc-ignored/report.md"
+evidence = ["render-improvement-harness/issues/text-layout-master-lnspc-ignored/evidence-1.png", "render-improvement-harness/issues/text-layout-master-lnspc-ignored/evidence-2.png", "render-improvement-harness/issues/text-layout-master-lnspc-ignored/evidence-3.png", "render-improvement-harness/issues/text-layout-master-lnspc-ignored/evidence-4.png"]
+impact = "medium"
+effort = "medium"
+findings = 7
+decks = 1
+solution = "render-improvement-harness/issues/text-layout-master-lnspc-ignored/possible-solution.md"
+
+[[fix]]
+id = "transform-text-orientation-wrong-under-rotation"
+title = "Text orientation not corrected for shape rotation/flip"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/transform-text-orientation-wrong-under-rotation/report.md"
+evidence = ["render-improvement-harness/issues/transform-text-orientation-wrong-under-rotation/evidence-1.png", "render-improvement-harness/issues/transform-text-orientation-wrong-under-rotation/evidence-2.png", "render-improvement-harness/issues/transform-text-orientation-wrong-under-rotation/evidence-3.png", "render-improvement-harness/issues/transform-text-orientation-wrong-under-rotation/evidence-4.png"]
+impact = "medium"
+effort = "medium"
+findings = 7
+decks = 2
+solution = "render-improvement-harness/issues/transform-text-orientation-wrong-under-rotation/possible-solution.md"
+
+[[fix]]
+id = "line-stroke-color-resolution-broken"
+title = "Connector/line stroke color not resolved from style or gradFill"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/line-stroke-color-resolution-broken/report.md"
+evidence = ["render-improvement-harness/issues/line-stroke-color-resolution-broken/evidence-1.png", "render-improvement-harness/issues/line-stroke-color-resolution-broken/evidence-2.png", "render-improvement-harness/issues/line-stroke-color-resolution-broken/evidence-3.png", "render-improvement-harness/issues/line-stroke-color-resolution-broken/evidence-4.png"]
+impact = "medium"
+effort = "medium"
+findings = 4
+decks = 1
+solution = "render-improvement-harness/issues/line-stroke-color-resolution-broken/possible-solution.md"
+
+[[fix]]
+id = "chart-axis-position-swapped"
+title = "Chart value axis c:axPos not honored — axes swapped"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/chart-axis-position-swapped/report.md"
+evidence = ["render-improvement-harness/issues/chart-axis-position-swapped/evidence-1.png", "render-improvement-harness/issues/chart-axis-position-swapped/evidence-2.png", "render-improvement-harness/issues/chart-axis-position-swapped/evidence-3.png", "render-improvement-harness/issues/chart-axis-position-swapped/evidence-4.png"]
+impact = "medium"
+effort = "medium"
+findings = 4
+decks = 1
+solution = "render-improvement-harness/issues/chart-axis-position-swapped/possible-solution.md"
+
+[[fix]]
+id = "chart-category-order-reversed"
+title = "Bar chart category order reversed top-to-bottom"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/chart-category-order-reversed/report.md"
+evidence = ["render-improvement-harness/issues/chart-category-order-reversed/evidence-1.png", "render-improvement-harness/issues/chart-category-order-reversed/evidence-2.png", "render-improvement-harness/issues/chart-category-order-reversed/evidence-3.png"]
+impact = "medium"
+effort = "easy"
+findings = 3
+decks = 1
+solution = "render-improvement-harness/issues/chart-category-order-reversed/possible-solution.md"
+
+[[fix]]
+id = "text-run-props-misc-property-ignored"
+title = "Misc run properties ignored (superscript baseline, italic)"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/text-run-props-misc-property-ignored/report.md"
+evidence = ["render-improvement-harness/issues/text-run-props-misc-property-ignored/evidence-1.png", "render-improvement-harness/issues/text-run-props-misc-property-ignored/evidence-2.png"]
+impact = "low"
+effort = "medium"
+findings = 2
+decks = 2
+solution = "render-improvement-harness/issues/text-run-props-misc-property-ignored/possible-solution.md"
+
+[[fix]]
+id = "chart-legend-and-title-position-wrong"
+title = "Chart legend position and title alignment not honored"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/chart-legend-and-title-position-wrong/report.md"
+evidence = ["render-improvement-harness/issues/chart-legend-and-title-position-wrong/evidence-1.png", "render-improvement-harness/issues/chart-legend-and-title-position-wrong/evidence-2.png", "render-improvement-harness/issues/chart-legend-and-title-position-wrong/evidence-3.png", "render-improvement-harness/issues/chart-legend-and-title-position-wrong/evidence-4.png"]
+impact = "low"
+effort = "medium"
+findings = 5
+decks = 1
+solution = "render-improvement-harness/issues/chart-legend-and-title-position-wrong/possible-solution.md"
+
+[[fix]]
+id = "picture-blip-duotone-bilevel-not-applied"
+title = "Blip color effects (duotone, biLevel) not applied or crash the picture"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/picture-blip-duotone-bilevel-not-applied/report.md"
+evidence = ["render-improvement-harness/issues/picture-blip-duotone-bilevel-not-applied/evidence-1.png", "render-improvement-harness/issues/picture-blip-duotone-bilevel-not-applied/evidence-2.png", "render-improvement-harness/issues/picture-blip-duotone-bilevel-not-applied/evidence-3.png", "render-improvement-harness/issues/picture-blip-duotone-bilevel-not-applied/evidence-4.png"]
+impact = "low"
+effort = "medium"
+findings = 3
+decks = 1
+solution = "render-improvement-harness/issues/picture-blip-duotone-bilevel-not-applied/possible-solution.md"
+
+[[fix]]
+id = "chart-axis-autoscale-not-rounded"
+title = "Chart value-axis auto-scale doesn't round to friendly increments"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/chart-axis-autoscale-not-rounded/report.md"
+evidence = ["render-improvement-harness/issues/chart-axis-autoscale-not-rounded/evidence-1.png", "render-improvement-harness/issues/chart-axis-autoscale-not-rounded/evidence-2.png", "render-improvement-harness/issues/chart-axis-autoscale-not-rounded/evidence-3.png", "render-improvement-harness/issues/chart-axis-autoscale-not-rounded/evidence-4.png"]
+impact = "low"
+effort = "medium"
+findings = 4
+decks = 1
+solution = "render-improvement-harness/issues/chart-axis-autoscale-not-rounded/possible-solution.md"
+
+[[fix]]
+id = "chart-minimal-chart-series-axis-broken"
+title = "Line chart series, axis labels, and noFill axis line all mis-rendered"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/chart-minimal-chart-series-axis-broken/report.md"
+evidence = ["render-improvement-harness/issues/chart-minimal-chart-series-axis-broken/evidence-1.png", "render-improvement-harness/issues/chart-minimal-chart-series-axis-broken/evidence-2.png", "render-improvement-harness/issues/chart-minimal-chart-series-axis-broken/evidence-3.png"]
+impact = "low"
+effort = "medium"
+findings = 3
+decks = 1
+solution = "render-improvement-harness/issues/chart-minimal-chart-series-axis-broken/possible-solution.md"
+
+[[fix]]
+id = "effects-prsttxwarp-and-outershdw-ignored"
+title = "Text warp (prstTxWarp) and outer shadow effects not applied"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/effects-prsttxwarp-and-outershdw-ignored/report.md"
+evidence = ["render-improvement-harness/issues/effects-prsttxwarp-and-outershdw-ignored/evidence-1.png", "render-improvement-harness/issues/effects-prsttxwarp-and-outershdw-ignored/evidence-2.png", "render-improvement-harness/issues/effects-prsttxwarp-and-outershdw-ignored/evidence-3.png"]
+impact = "low"
+effort = "hard"
+findings = 3
+decks = 2
+solution = "render-improvement-harness/issues/effects-prsttxwarp-and-outershdw-ignored/possible-solution.md"
+
+[[fix]]
+id = "unsupported-custgeom-picturefill-wordmark-not-drawn"
+title = "custGeom shape with a picture fill not drawn at all"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/unsupported-custgeom-picturefill-wordmark-not-drawn/report.md"
+evidence = ["render-improvement-harness/issues/unsupported-custgeom-picturefill-wordmark-not-drawn/evidence-1.png", "render-improvement-harness/issues/unsupported-custgeom-picturefill-wordmark-not-drawn/evidence-2.png", "render-improvement-harness/issues/unsupported-custgeom-picturefill-wordmark-not-drawn/evidence-3.png", "render-improvement-harness/issues/unsupported-custgeom-picturefill-wordmark-not-drawn/evidence-4.png"]
+impact = "low"
+effort = "hard"
+findings = 3
+decks = 1
+solution = "render-improvement-harness/issues/unsupported-custgeom-picturefill-wordmark-not-drawn/possible-solution.md"
+
+[[fix]]
+id = "transform-group-child-rotation-scale-wrong"
+title = "Group child rotation + anisotropic scale computed wrong"
+status = "todo"
+[fix.meta]
+report = "render-improvement-harness/issues/transform-group-child-rotation-scale-wrong/report.md"
+evidence = ["render-improvement-harness/issues/transform-group-child-rotation-scale-wrong/evidence-1.png", "render-improvement-harness/issues/transform-group-child-rotation-scale-wrong/evidence-2.png", "render-improvement-harness/issues/transform-group-child-rotation-scale-wrong/evidence-3.png"]
+impact = "low"
+effort = "easy"
+findings = 1
+decks = 1
+solution = "render-improvement-harness/issues/transform-group-child-rotation-scale-wrong/possible-solution.md"

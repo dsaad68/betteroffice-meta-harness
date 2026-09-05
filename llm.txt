@@ -81,8 +81,15 @@ push serially. Agents cut their own worktrees with `wt` and never call `gh`, nev
 rebase — parallel agents that publish will conflict with each other and duplicate analysis when two
 clusters share a cause.
 
-`ORDER.md` has one writer, the dispatching session. `TODO.md` is where agents write as they work.
-`LEARNING.md` is appended to across runs.
+`ORDER.toml` has one writer, the dispatching session. It carries the whole backlog — every
+investigated cluster, `todo` until someone takes it — with each entry's report, solution and evidence
+paths in its metadata. `scripts/order.py` queries it (`backlog`, `ready`, `plan`, `deps`, `report`,
+`check`) and renders the merge-order issue body. `TODO.md` is
+where agents write as they work. `LEARNING.md` is appended to across runs.
+
+Do not confuse the two TOML files. `harness.lock.toml` locks the harness itself: which skill, agent
+and script versions work together. `ORDER.toml` is the work: which fixes and features depend on
+which. One is generated fact, the other is hand-authored intent.
 
 ## Things that will mislead you
 

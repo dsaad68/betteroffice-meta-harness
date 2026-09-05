@@ -27,21 +27,27 @@ So an agent produces work; this session publishes it.
 
 Create `fixes/<run-name>/` with:
 
-**`ORDER.md`** — the plan and the state, one table, in dependency order:
+**`ORDER.toml`** — the plan and the state, machine-readable. One `[[fix]]` or `[[feature]]` per
+entry, with `needs` / `repairs` / `after` / `supersedes` saying *how* one depends on another, and
+`[fix.meta]` carrying the issue and pull request numbers once they exist. The schema is in
+`docs/ORDER-SCHEMA.md`.
 
-| # | cluster | base SHA | status | depends on | agent | issue | PR |
-|---|---|---|---|---|---|---|---|
+Build it from `docs/FIX-PLAN.md` and each cluster's `report.md`. **Pin one `base` SHA for the whole
+run**; every agent branches from it and nobody rebases until publish time.
 
-Order it from `docs/FIX-PLAN.md` and each cluster's `report.md`. Statuses: `todo`, `claimed`,
-`drafted`, `filed`, `blocked`. **Pin one base SHA for the whole run** and put it in the table; every
-agent branches from it and nobody rebases until publish time.
+Query it with `scripts/order.py` rather than reading it by eye:
 
-`ORDER.md` is **yours alone**. It is the plan, and a plan with two writers is not a plan. Subagents
+    order.py check      cycles, unknown ids, duplicate ids   — run this after every edit
+    order.py ready      what can be worked on now
+    order.py plan       the merge order, topologically sorted
+    order.py deps <id>  what one entry waits on, and why
+
+`ORDER.toml` is **yours alone**. It is the plan, and a plan with two writers is not a plan. Subagents
 read it and never write to it.
 
 **`TODO.md`** — the shared working surface. Subagents write here: what they have started, what they
 found that changes the shape of the work, what they could not finish and why. You reconcile it into
-`ORDER.md` when you publish. Expect it to be messy; that is what it is for.
+`ORDER.toml` when you publish. Expect it to be messy; that is what it is for.
 
 **`LEARNING.md`** — appended to, never rewritten. What the codebase does that was not obvious, where
 a `report.md` was wrong, which tools bite. Read it before dispatching agents, and pass anything
@@ -52,7 +58,7 @@ relevant into their prompts.
 Launch `issue-fixer` agents, at most 3 at once, one cluster each. Never two clusters that edit the
 same function — check the `files:` frontmatter in each `report.md` for overlap and sequence those.
 
-Mark the row `claimed` in `ORDER.md` before dispatching, so a re-entry does not double-dispatch.
+Set the entry's `status` to `claimed` in `ORDER.toml` before dispatching, so a re-entry does not double-dispatch.
 
 Each agent cuts its own worktree with `wt`, from the run's pinned base SHA. Do not create them
 yourself — the project's `wt` hooks provision the build cache, the Python environment and the decks,
@@ -69,7 +75,7 @@ Give each agent a distinct slug. Two agents cutting the same branch name will co
 
 ## 3. Publish (serial, this session)
 
-For each agent that reports back, in `ORDER.md` order:
+For each agent that reports back, in `order.py plan` order:
 
 1. Read its `issue.md`, `pr.md` and diff. Check the claim in `pr.md` against what the diff does.
 2. File the issue with `gh issue create`. Record the number.
@@ -77,15 +83,17 @@ For each agent that reports back, in `ORDER.md` order:
    worktree is on the run's pinned base, which is usually not `main`: expect to drop files for
    crates the target branch does not have, and to re-apply anything the base has moved under.
 4. Open the pull request, referencing the issue.
-5. Update the row to `filed` with both numbers, and fold anything the agent left in `TODO.md` into
-   `ORDER.md` — a discovered dependency, a cluster that turned out to be two, a blocker.
+5. Set `status = "filed"`, write the issue and pull request numbers into `[fix.meta]`, and fold
+   anything the agent left in `TODO.md` into `ORDER.toml` — a discovered dependency, a cluster that
+   turned out to be two, a blocker. Re-run `order.py check`.
 
 Do not batch a push with a test run in one command — gate the push on the tests passing.
 
 ## 4. Close the run
 
-Clear the entries you have reconciled out of `TODO.md`, then update the merge-order issue: one step per pull request with its issue, why it sits there, and what
-it depends on. Then append to `LEARNING.md`.
+Clear the entries you have reconciled out of `TODO.md`, then regenerate the merge-order issue body
+with `order.py issue` and post it. Do not hand-write that body: it was hand-edited three times before
+this existed and drifted every time. Then append to `LEARNING.md`.
 
 ## Rules that keep this honest
 
