@@ -51,9 +51,37 @@ parent's environment, which does not carry what the child declared.
 
 All ten take `--help`. They use click, so options behave the way you expect.
 
-The one dependency uv cannot supply is `betteroffice_pptx`, the candidate renderer. It is built from
-the fork by `scripts/setup_worktree.sh` and reached through `PYTHONPATH`, not PyPI. `render_bo.py`
-and `verify_fix.py` need it.
+### The candidate renderer
+
+`betteroffice_pptx` is not on PyPI: it is a Rust extension built from the fork by
+`scripts/setup_worktree.sh`. `render_bo.py` and `verify_fix.py` need it, and `common.ensure_binding()`
+finds it — first `BETTEROFFICE_BINDING`, then the local build in the working repo.
+
+uv can build it too. `[tool.uv.sources]` is honoured in PEP 723 inline metadata (verified, though
+the dependency docs only describe `pyproject.toml`), so either of these resolves it:
+
+    # /// script
+    # dependencies = ["betteroffice-pptx"]
+    #
+    # [tool.uv.sources]
+    # betteroffice-pptx = { git = "https://github.com/openooxml/betteroffice", branch = "feat/pptx-screenshot", subdirectory = "bindings/python-pptx" }
+    # ///
+
+    # or, against a checkout you already have:
+    # betteroffice-pptx = { path = "../betteroffice/bindings/python-pptx", editable = true }
+
+Or with no edit to the script at all:
+
+    uv run --with "betteroffice-pptx @ git+https://github.com/openooxml/betteroffice@<rev>#subdirectory=bindings/python-pptx" \
+           --script scripts/render_bo.py my-deck
+
+**The harness does not pin it, deliberately.** The engine is the thing being measured: it changes
+per worktree and per run, which is the whole point of `verify_fix.py --engine`. A source fixed in
+the script header cannot express "whichever worktree I am comparing right now". Use the git form
+when you want a known revision — a one-off measurement against upstream, or reproducing someone
+else's number — and the built local engine the rest of the time.
+
+Note the branch: `render_png` is only on `feat/pptx-screenshot` until #264 merges.
 
 ## The two renderers
 

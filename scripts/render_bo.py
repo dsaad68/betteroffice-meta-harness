@@ -15,7 +15,7 @@ import shutil
 import sys
 import time
 
-from common import CJK_DIR, FONT_DIR, SCALE, deck_dir, load_meta, save_meta, slide_name
+from common import CJK_DIR, FONT_DIR, SCALE, deck_dir, ensure_binding, load_meta, save_meta, slide_name
 
 FAMILIES = {
     "LiberationSans": ["Arial", "Helvetica", "Liberation Sans"],
@@ -48,6 +48,7 @@ def register_fonts(deck) -> int:
 
 def render(deck_id: str) -> None:
     try:
+        ensure_binding()
         import betteroffice_pptx as bo
     except ImportError:
         sys.exit("betteroffice_pptx not importable; run: cd bindings/python-pptx && maturin develop")

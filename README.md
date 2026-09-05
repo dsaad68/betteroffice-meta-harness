@@ -79,6 +79,11 @@ its dependencies, so there is no environment to create or keep in sync.
 ./scripts/pipeline.py deck.pptx --id my-deck
 ```
 
+Dependencies come from the script header, including from git when useful:
+`[tool.uv.sources]` is honoured in inline script metadata, so the renderer under test can be built
+straight from a repository and revision. `llm.txt` has the exact syntax and says when to prefer it
+over a local build.
+
 `llm.txt` is the setup and operating guide, written for an agent. `harness.lock.toml` records which
 component versions work together, and `./scripts/check_versions.py` fails if anything has drifted
 from it.

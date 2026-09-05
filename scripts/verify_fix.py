@@ -31,7 +31,7 @@ from pathlib import Path
 import yaml
 from PIL import Image, ImageDraw
 
-from common import DECKS, ISSUES, ROOT, slide_name
+from common import DECKS, ISSUES, ROOT, ensure_binding, slide_name
 from diff import metrics, verdict
 
 
@@ -65,6 +65,7 @@ def render_with(engine: Path, deck_id: str, slides: list[str], out_dir: Path) ->
 
 
 def render_worker(deck_id: str, out_dir: Path, slides: list[str]) -> None:
+    ensure_binding()
     import betteroffice_pptx as bo
 
     from render_bo import register_fonts
