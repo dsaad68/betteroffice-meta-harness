@@ -46,13 +46,30 @@ flowchart TD
 Stages 1–5 are deterministic scripts. The judgement stages are subagents, because "what is wrong
 with this slide" and "are these two findings the same defect" are not things a diff can answer.
 
+## Fixing in parallel
+
+`fix-loop` fans out one `issue-fixer` per cluster. Each verifies its investigation against the code,
+implements the fix with tests, measures it, and drafts the issue and pull request into its own
+folder — and stops there. It never calls `gh`, never pushes, never rebases.
+
+That split is deliberate. Parallel agents that publish will cut branches at different times and
+conflict the moment one merges, duplicate each other's analysis when two clusters share a cause, and
+choose approaches to shared code that do not compose. So the parallelism sits where it is expensive
+— investigation and implementation — and everything with a side effect happens serially, in order,
+from one place.
+
+Ownership is split the same way. `ORDER.md` is the plan and has exactly one writer, the dispatching
+session. `TODO.md` is the shared surface the agents write to as they work, and the session folds it
+back into the plan as it publishes. `LEARNING.md` is appended to across runs, because most of what
+goes wrong is knowledge that existed only in the last agent's head.
+
 ## Layout
 
 | path | what it is |
 |---|---|
 | `scripts/` | the deterministic pipeline — register a deck, render both sides, extract XML, diff, collect, index, verify a fix, file an issue |
-| `agents/` | the three subagents: per-slide comparator, taxonomist, per-cluster investigator |
-| `skills/` | the skill that drives the loop |
+| `agents/` | the subagents: per-slide comparator, taxonomist, per-cluster investigator, per-cluster fixer |
+| `skills/` | the skills that drive the loop — `render-harness` to find defects, `fix-loop` to fix them |
 | `templates/` | the report and issue shapes the agents fill in |
 | `docs/` | the dependency-ordered fix plan, the fix loop, and the failure taxonomy |
 
