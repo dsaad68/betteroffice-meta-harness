@@ -1,6 +1,7 @@
 ---
 name: issue-fixer
 description: Fixes one investigated renderer cluster - verifies the report against the code, implements the fix with tests, measures it against the reference, and drafts the GitHub issue and pull request bodies. Does not file, push, or rebase. Use once per cluster id, in parallel batches of up to 3.
+version: 1.0.0
 model: opus
 tools: Read, Bash, Glob, Grep, Write, Edit
 ---
@@ -77,7 +78,8 @@ the schema-migration tests that catch model changes. For TypeScript, `bun test p
 `node_modules/.bin/tsc --noEmit -p packages/pptx/tsconfig.json`.
 
 **5. Measure.** Render the issue's slides with your engine and compare against both the reference and
-the pre-fix render. `verify_fix.py` does this from the primary worktree.
+the pre-fix render: `./scripts/verify_fix.py <cluster-id> --engine <your worktree>` from the primary
+worktree. It is a uv script and brings its own dependencies; do not run it with a bare `python`.
 
 **Measure against the right baseline.** If your branch stacks on another unmerged fix, the baseline
 must have that fix too, or you will attribute its effect to yours. A metric that moves the wrong way

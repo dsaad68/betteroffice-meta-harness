@@ -1,4 +1,10 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["click>=8.1", "numpy>=1.26", "pillow>=10", "pyyaml>=6"]  # numpy via diff.py
+# ///
+# harness-component: scripts
+# harness-version: 1.0.0
 """Check one issue's fix: re-render its slides with a candidate engine, then compare against
 the committed baseline and the LibreOffice reference.
 
@@ -13,7 +19,7 @@ renders and the baseline all live here while only the compiled engine comes from
 
 from __future__ import annotations
 
-import argparse
+import click
 import json
 import os
 import re
@@ -88,19 +94,22 @@ def triptych(ref: Path, before: Path, after: Path, dest: Path, labels: tuple[str
 
 def main() -> None:
     # The render worker re-enters this file in a subprocess with PYTHONPATH pointing at the
-    # candidate engine, so it is dispatched before argparse sees the normal arguments.
+    # candidate engine, so it is dispatched before click sees the normal arguments.
     if "--_render" in sys.argv:
         deck_id, out_dir, *slides = sys.argv[sys.argv.index("--_render") + 1 :]
         return render_worker(deck_id, Path(out_dir), slides)
 
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("issue_id")
-    ap.add_argument("--engine", type=Path, default=ROOT, help="worktree holding the fix (default: this one)")
-    args = ap.parse_args()
+    return main_cli.main(standalone_mode=True)
 
-    folder = ISSUES / args.issue_id
+
+@click.command(name="verify_fix", help=__doc__)
+@click.argument("issue_id")
+@click.option("--engine", type=click.Path(file_okay=False, path_type=Path), default=ROOT,
+              show_default="this worktree", help="worktree holding the fix")
+def main_cli(issue_id: str, engine: Path) -> None:
+    folder = ISSUES / issue_id
     if not (folder / "report.md").exists():
-        sys.exit(f"unknown issue {args.issue_id}")
+        sys.exit(f"unknown issue {issue_id}")
     head = frontmatter(folder / "report.md")
     affected: dict[str, list[str]] = {}
     for f in head.get("findings") or []:
@@ -112,7 +121,7 @@ def main() -> None:
     others = findings_by_slide()
     out = folder / "verify"
     out.mkdir(exist_ok=True)
-    engine = args.engine.expanduser().resolve()
+    engine = engine.expanduser().resolve()
     rows, worse, overlap_notes = [], [], []
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -135,11 +144,11 @@ def main() -> None:
                     worse.append(f"{deck_id}/{num}")
                 triptych(ref, before, after, out / f"{deck_id}-{num}.png",
                          ("LibreOffice (reference, via pptx-pdf)", "BetterOffice before", "BetterOffice after"))
-                co = {i for i, _ in others.get((deck_id, num), []) if i != args.issue_id}
+                co = {i for i, _ in others.get((deck_id, num), []) if i != issue_id}
                 if co:
                     overlap_notes.append(f"  {deck_id}/{num}: also {', '.join(sorted(co))}")
 
-    print(f"\nissue: {args.issue_id}   engine: {engine}")
+    print(f"\nissue: {issue_id}   engine: {engine}")
     print(f"{'slide':28} {'before':>8} {'after':>8} {'delta':>8}   verdict")
     for name, b, a, delta in rows:
         if b is None:
@@ -157,7 +166,7 @@ def main() -> None:
         print("some fixes are documented to make a slide worse until a dependent issue lands.")
 
     summary = {
-        "issue": args.issue_id,
+        "issue": issue_id,
         "engine": str(engine),
         "slides": [
             {"slide": n, "before": b, "after": a, "delta": d} for n, b, a, d in rows if b is not None

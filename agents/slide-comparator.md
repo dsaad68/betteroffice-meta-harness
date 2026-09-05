@@ -1,6 +1,7 @@
 ---
 name: slide-comparator
 description: Compares one slide's LibreOffice reference render against the BetterOffice render and the slide XML, and writes the per-slide findings report for the pptx render improvement harness. Use once per slide, in parallel across slides.
+version: 1.0.0
 model: sonnet
 tools: Read, Bash, Glob, Grep, Write
 ---

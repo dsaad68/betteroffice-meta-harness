@@ -1,0 +1,107 @@
+# betteroffice-meta-harness — for an agent picking this up
+
+A differential rendering harness for BetterOffice's PowerPoint renderer. It renders a deck twice —
+reference and candidate — diffs them per slide, clusters the differences into distinct renderer
+defects, and turns each cluster into an upstream issue and a pull request.
+
+This repo holds the method and the code. It holds no decks and no renders: the sample decks are
+third-party copyrighted files, and renders of them stay on the machine that made them.
+
+Read `harness.lock.toml` first. It says which component versions work together, and what has to be
+installed.
+
+## Setup
+
+You need three checkouts side by side:
+
+    ~/GitHub/betteroffice-meta-harness   this repo
+    ~/GitHub/fork/betteroffice           your fork of openooxml/betteroffice
+    ~/GitHub/pptx-pdf                    the reference renderer
+
+    git clone https://github.com/dsaad68/betteroffice-meta-harness
+    git clone https://github.com/<you>/betteroffice        ~/GitHub/fork/betteroffice
+    git clone https://github.com/dsaad68/pptx-pdf          ~/GitHub/pptx-pdf
+    cd ~/GitHub/pptx-pdf && cargo build --release
+
+Tools: `uv`, `gh` (authenticated), `wt` (worktrunk), a Rust toolchain, and `bun` if you touch the
+TypeScript renderer. `scripts/common.py` holds the paths — change them there, not in each script.
+
+Install the skills and agents where your agent runtime looks for them. For Claude Code that is the
+target repo's `.claude/`:
+
+    cp -r skills/*  ~/GitHub/fork/betteroffice/.claude/skills/
+    cp    agents/*  ~/GitHub/fork/betteroffice/.claude/agents/
+
+Then check nothing has drifted:
+
+    ./scripts/check_versions.py
+
+## Running the scripts
+
+**Every script is a self-contained uv script.** The PEP 723 header names its own dependencies, so
+there is no shared virtualenv to create, activate or keep in sync — uv resolves each script's
+dependencies on first run and caches them.
+
+    ./scripts/pipeline.py deck.pptx --id my-deck
+    uv run --script scripts/pipeline.py deck.pptx --id my-deck   # same thing
+
+Do not run them with a bare `python`: the dependencies will not be there. If one script spawns
+another it uses `uv run --script` for the same reason — `sys.executable` would hand the child the
+parent's environment, which does not carry what the child declared.
+
+All ten take `--help`. They use click, so options behave the way you expect.
+
+The one dependency uv cannot supply is `betteroffice_pptx`, the candidate renderer. It is built from
+the fork by `scripts/setup_worktree.sh` and reached through `PYTHONPATH`, not PyPI. `render_bo.py`
+and `verify_fix.py` need it.
+
+## The two renderers
+
+**Reference** — `pptx-pdf`, a CLI driving an embedded LibreOffice to PNG at a chosen DPI.
+
+**Candidate** — BetterOffice's own `render_png`. It did not exist when this work started; it was
+added upstream as openooxml/betteroffice#264 precisely so the renderer could be measured. That is
+still on its branch and expected to merge shortly, so `crates/pptx-raster` is not on `main` yet:
+cut fix worktrees from the rasterizer branch, and expect a fix touching the raster backend to ship
+in two parts.
+
+Both render at 96 dpi with Liberation, Carlito and Caladea aliased to the metric-compatible
+Microsoft families, so a difference means layout, not fonts.
+
+## The two loops
+
+**Finding defects** — skill `render-harness`:
+register and render a deck, fan out one `slide-comparator` per slide, cluster with
+`failure-taxonomist`, then one `issue-investigator` per cluster writing `report.md` and
+`possible-solution.md`.
+
+**Fixing them** — skill `fix-loop`:
+build a dependency-ordered `ORDER.md`, fan out `issue-fixer` agents (up to three), then file and
+push serially. Agents cut their own worktrees with `wt` and never call `gh`, never push, never
+rebase — parallel agents that publish will conflict with each other and duplicate analysis when two
+clusters share a cause.
+
+`ORDER.md` has one writer, the dispatching session. `TODO.md` is where agents write as they work.
+`LEARNING.md` is appended to across runs.
+
+## Things that will mislead you
+
+**The per-pixel percentage is triage, not a score.** A correct fix can raise it: text drawn at its
+proper size diverges more from a reference whose line breaking differs than the wrong-sized text
+did. A fix landing before its dependency can raise it. And a small correct fix barely moves it —
+removing twelve stray digits from a chart is about 123 pixels on a 1280×720 slide. Judge against the
+issue's own verification section, and look at the render.
+
+**An investigation report is a strong prior, not a fact.** They have been wrong: one proposed a
+field on a struct the writer never sees; another missed that lifting a clip breaks hit testing.
+Verify the central claim against the code before building on it.
+
+**Measure against the right baseline.** If your branch stacks on an unmerged fix, the baseline needs
+that fix too, or you will credit its effect to yours.
+
+**`wt` hooks run in the background.** `wt switch --create … --yes` returns before the worktree is
+provisioned. Confirm the binding resolves to your worktree and exposes `render_png` before you
+trust a measurement.
+
+**Evidence must be publishable.** Only decks whose slides carry placeholder content. Never a
+third-party presentation, never a slide showing a person's name or contact details.

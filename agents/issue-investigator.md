@@ -1,6 +1,7 @@
 ---
 name: issue-investigator
 description: Investigates one clustered renderer failure from the pptx render improvement harness by reading the BetterOffice pptx crates, writes the issue report with evidence images and a possible solution, and refines the effort estimate. Use once per cluster id.
+version: 1.0.0
 model: opus
 tools: Read, Bash, Glob, Grep, Write, Edit
 ---

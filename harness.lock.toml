@@ -1,0 +1,43 @@
+# Which component versions are known to work together.
+#
+# Every component declares its own version — skills and agents in their frontmatter, scripts in a
+# `# harness-version:` header line. This file is the compatible set. `scripts/check_versions.py`
+# fails if a declaration and this file disagree, so drift is caught rather than discovered.
+#
+# Bump `release` when any component changes. Components carry the release they were last changed
+# in, so a glance shows what moved.
+
+release = "1.0.0"
+released = "2026-09-05"
+
+[requires]
+python = ">=3.11"
+uv = ">=0.5"          # PEP 723 inline script metadata
+gh = ">=2.0"          # only for filing issues and pull requests
+wt = ">=0.76"         # worktrunk, for per-agent worktrees
+
+[skills]
+render-harness = "1.0.0"
+fix-loop = "1.0.0"
+
+[agents]
+slide-comparator = "1.0.0"
+failure-taxonomist = "1.0.0"
+issue-investigator = "1.0.0"
+issue-fixer = "1.0.0"
+
+[scripts]
+# All scripts move together: they share `common.py` and the on-disk layout, so a change to one
+# deck or issue path affects every one of them.
+all = "1.0.0"
+
+# What each skill needs. A skill may run with newer components only if the major version matches.
+[compatibility.render-harness]
+agents = ["slide-comparator", "failure-taxonomist", "issue-investigator"]
+scripts = "^1.0.0"
+
+[compatibility.fix-loop]
+agents = ["issue-fixer"]
+scripts = "^1.0.0"
+# fix-loop reads the issue folders render-harness produces, so it needs that skill's output shape.
+skills = ["render-harness ^1.0.0"]

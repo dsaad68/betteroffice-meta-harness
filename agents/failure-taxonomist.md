@@ -1,6 +1,7 @@
 ---
 name: failure-taxonomist
 description: Clusters the per-slide findings of the pptx render improvement harness into distinct renderer failures, extends the taxonomy where needed, ranks the clusters, and writes clusters.json plus the issues index. Use after all slide reports for a batch of decks exist.
+version: 1.0.0
 model: opus
 tools: Read, Bash, Glob, Grep, Write, Edit
 ---

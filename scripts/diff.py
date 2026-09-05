@@ -1,9 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["click>=8.1", "numpy>=1.26", "pillow>=10"]
+# ///
+# harness-component: scripts
+# harness-version: 1.0.0
 """Pixel-diff LibreOffice vs BetterOffice renders: heatmaps, side-by-side images, and diff-summary.json."""
 
 from __future__ import annotations
 
-import argparse
+import click
 import json
 import shutil
 
@@ -104,7 +110,11 @@ def run(deck_id: str) -> None:
     print(f"{deck_id}: " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
 
 
+@click.command(help=__doc__)
+@click.argument("deck_id")
+def main(deck_id: str) -> None:
+    run(deck_id)
+
+
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("deck_id")
-    run(ap.parse_args().deck_id)
+    main()

@@ -1,8 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["click>=8.1", "pyyaml>=6"]
+# ///
+# harness-component: scripts
+# harness-version: 1.0.0
 """Render issues/INDEX.md from clusters.json; issue report frontmatter is written back to clusters.json first."""
 
 from __future__ import annotations
 
+import click
 import json
 import re
 
@@ -14,6 +21,7 @@ IMPACT = {"high": 0, "medium": 1, "low": 2}
 EFFORT = {"easy": 0, "medium": 1, "hard": 2}
 
 
+@click.command(help=__doc__)
 def main() -> None:
     path = HARNESS / "clusters.json"
     if not path.exists():

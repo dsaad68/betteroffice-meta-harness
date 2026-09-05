@@ -1,9 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["click>=8.1", "pyyaml>=6"]
+# ///
+# harness-component: scripts
+# harness-version: 1.0.0
 """Render a GitHub issue body for one investigated cluster from templates/github-issue.md; --create files it."""
 
 from __future__ import annotations
 
-import argparse
+import click
 import json
 import re
 import subprocess
@@ -188,25 +194,24 @@ def render(issue_id: str, only: set[int] | None = None) -> tuple[str, str]:
     return title, out
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("issue_id")
-    ap.add_argument("--create", action="store_true", help="file it on GitHub with gh and record the number")
-    ap.add_argument("--repo", default=UPSTREAM)
-    ap.add_argument("--evidence", help="comma-separated evidence numbers to embed (default: all)")
-    args = ap.parse_args()
-    only = {int(n) for n in args.evidence.split(",")} if args.evidence else None
-    title, body = render(args.issue_id, only)
-    out = ISSUES / args.issue_id / "github-issue.md"
+@click.command(help=__doc__)
+@click.argument("issue_id")
+@click.option("--create", is_flag=True, help="file it on GitHub with gh and record the number")
+@click.option("--repo", default=UPSTREAM, show_default=True)
+@click.option("--evidence", help="comma-separated evidence numbers to embed (default: all)")
+def main(issue_id: str, create: bool, repo: str, evidence: str | None) -> None:
+    only = {int(n) for n in evidence.split(",")} if evidence else None
+    title, body = render(issue_id, only)
+    out = ISSUES / issue_id / "github-issue.md"
     out.write_text(f"# {title}\n\n{body}")
-    print(f"{args.issue_id}: {len(body):,} chars -> {out.relative_to(ROOT)}")
-    if not args.create:
+    print(f"{issue_id}: {len(body):,} chars -> {out.relative_to(ROOT)}")
+    if not create:
         return
     mapping = json.loads(MAPPING.read_text()) if MAPPING.exists() else {}
-    if args.issue_id in mapping:
-        sys.exit(f"already filed as {mapping[args.issue_id]['url']}")
-    url = subprocess.run(["gh", "issue", "create", "--repo", args.repo, "--title", title, "--label", "bug", "--body", body], capture_output=True, text=True, check=True).stdout.strip()
-    mapping[args.issue_id] = {"url": url, "number": int(url.rsplit("/", 1)[1])}
+    if issue_id in mapping:
+        sys.exit(f"already filed as {mapping[issue_id]['url']}")
+    url = subprocess.run(["gh", "issue", "create", "--repo", repo, "--title", title, "--label", "bug", "--body", body], capture_output=True, text=True, check=True).stdout.strip()
+    mapping[issue_id] = {"url": url, "number": int(url.rsplit("/", 1)[1])}
     MAPPING.write_text(json.dumps(mapping, indent=2, sort_keys=True) + "\n")
     print(url)
 

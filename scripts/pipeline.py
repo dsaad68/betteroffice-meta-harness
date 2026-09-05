@@ -1,9 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["click>=8.1"]
+# ///
+# harness-component: scripts
+# harness-version: 1.0.0
 """Run the deterministic stages for one deck: register, render both sides, extract XML, diff."""
 
 from __future__ import annotations
 
-import argparse
+import click
 import subprocess
 import sys
 from pathlib import Path
@@ -14,27 +20,29 @@ SCRIPTS = Path(__file__).resolve().parent
 
 
 def step(name: str, *args: str) -> None:
+    """Run a stage as its own uv script, so it resolves the dependencies it declares.
+
+    Not `sys.executable`: this script's environment only carries what its own header asks for,
+    which is not what diff.py or collect.py need."""
     print(f"== {name} {' '.join(args)}", flush=True)
-    subprocess.run([sys.executable, str(SCRIPTS / name), *args], check=True)
+    subprocess.run(["uv", "run", "--script", str(SCRIPTS / name), *args], check=True)
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("target", help="a .pptx path or an existing deck id")
-    ap.add_argument("--id")
-    ap.add_argument("--source-url", default="")
-    ap.add_argument("--skip-lo", action="store_true", help="reuse existing LibreOffice renders")
-    args = ap.parse_args()
-
-    target = Path(args.target)
+@click.command(help=__doc__)
+@click.argument("target")
+@click.option("--id", "deck_id_opt", help="deck id (default: slug of the file name)")
+@click.option("--source-url", default="", help="where the deck came from")
+@click.option("--skip-lo", is_flag=True, help="reuse existing LibreOffice renders")
+def main(target: str, deck_id_opt: str | None, source_url: str, skip_lo: bool) -> None:
+    target = Path(target)
     if target.suffix.lower() == ".pptx" and target.exists():
-        deck_id = args.id or slug(target.name)
-        step("add_deck.py", str(target), "--id", deck_id, "--source-url", args.source_url)
+        deck_id = deck_id_opt or slug(target.name)
+        step("add_deck.py", str(target), "--id", deck_id, "--source-url", source_url)
     else:
-        deck_id = args.target
+        deck_id = target
         if not (DECKS / deck_id / "source.pptx").exists():
             sys.exit(f"unknown deck id {deck_id}")
-    if not (args.skip_lo and (DECKS / deck_id / "lo-img").exists()):
+    if not (skip_lo and (DECKS / deck_id / "lo-img").exists()):
         step("render_lo.py", deck_id)
     step("render_bo.py", deck_id)
     step("extract_xml.py", deck_id)

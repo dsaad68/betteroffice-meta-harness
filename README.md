@@ -69,6 +69,19 @@ session. `TODO.md` is the shared surface the agents write to as they work, and t
 back into the plan as it publishes. `LEARNING.md` is appended to across runs, because most of what
 goes wrong is knowledge that existed only in the last agent's head.
 
+## Running it
+
+Every script is a self-contained [uv](https://docs.astral.sh/uv/) script: the PEP 723 header names
+its dependencies, so there is no environment to create or keep in sync.
+
+```
+./scripts/pipeline.py deck.pptx --id my-deck
+```
+
+`llm.txt` is the setup and operating guide, written for an agent. `harness.lock.toml` records which
+component versions work together, and `./scripts/check_versions.py` fails if anything has drifted
+from it.
+
 ## Layout
 
 | path | what it is |
@@ -78,6 +91,8 @@ goes wrong is knowledge that existed only in the last agent's head.
 | `skills/` | the skills that drive the loop — `render-harness` to find defects, `fix-loop` to fix them |
 | `templates/` | the report and issue shapes the agents fill in |
 | `docs/` | the dependency-ordered fix plan, the fix loop, and the failure taxonomy |
+| `harness.lock.toml` | the compatible set of skill, agent and script versions |
+| `llm.txt` | setup and operating guide for an agent |
 
 ## The two renderers
 

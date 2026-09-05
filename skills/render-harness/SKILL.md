@@ -1,16 +1,23 @@
 ---
 name: render-harness
 description: Drive the pptx render improvement harness end to end - register decks, render with LibreOffice and BetterOffice, diff, fan out slide comparisons, cluster findings, and investigate issues. Use for "run the harness", "compare deck X", "cluster findings", "investigate issue Y".
+version: 1.0.0
 ---
 
 # Render improvement harness
 
-Everything lives under `render-improvement-harness/`. Deterministic stages are scripts; judgement stages are subagents. Run scripts with `.venv/bin/python` from the repo root.
+Everything lives under `render-improvement-harness/`. Deterministic stages are scripts; judgement stages are subagents.
+
+**Scripts are self-contained uv scripts.** Each declares its own dependencies in a PEP 723 header, so
+there is no shared virtualenv to activate — run them directly (`./scripts/pipeline.py …`) or with
+`uv run --script`. Never with a bare `python`: the dependencies will not be there. All of them take
+`--help`. The one thing uv cannot supply is `betteroffice_pptx`, the candidate renderer, which is
+built from the fork and reached through `PYTHONPATH`.
 
 ## Stages
 
 1. **Register and render** (script, per deck):
-   `.venv/bin/python render-improvement-harness/scripts/pipeline.py <deck.pptx> --id <deck-id> --source-url <url>`
+   `./render-improvement-harness/scripts/pipeline.py <deck.pptx> --id <deck-id> --source-url <url>`
    Produces `decks/<deck-id>/{meta.json,lo-img,bo-img,xml,diff-img,diff-summary.json,bo-log.json}`. Pass a deck id instead of a path to re-run; `--skip-lo` reuses the LibreOffice renders. LibreOffice takes about a minute on first use and a few seconds per deck afterwards.
    Commit `meta.json`, `diff-summary.json` and `bo-log.json` with `scripts/commit.sh "harness(<deck-id>): register"`.
 

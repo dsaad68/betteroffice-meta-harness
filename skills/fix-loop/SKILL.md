@@ -1,12 +1,17 @@
 ---
 name: fix-loop
 description: Fix clustered renderer issues in parallel - build a dependency-ordered plan, fan out issue-fixer subagents that investigate, fix, test and draft the issue and pull request, then file and push them serially and update the merge-order issue. Use for "fix the next N issues", "work the fix loop", "fix cluster X".
+version: 1.0.0
 ---
 
 # Fix loop
 
 Turns investigated clusters into merged-ready pull requests. Investigation happens in parallel;
 anything with a side effect outside the working tree happens serially, in this session.
+
+Scripts are self-contained uv scripts: run them directly or with `uv run --script`, never with a
+bare `python`. `./scripts/check_versions.py` confirms the skills, agents and scripts on disk match
+`harness.lock.toml` — run it if anything behaves unexpectedly after an update.
 
 ## Why the split
 

@@ -1,8 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["click>=8.1", "pyyaml>=6"]
+# ///
+# harness-component: scripts
+# harness-version: 1.0.0
 """Gather every slide report's findings into findings.jsonl and print a short summary."""
 
 from __future__ import annotations
 
+import click
 import json
 import re
 import sys
@@ -42,6 +49,7 @@ def parse(block: str) -> dict:
         return yaml.safe_load(quote_values(block)) or {}
 
 
+@click.command(help=__doc__)
 def main() -> None:
     rows = []
     for report in sorted(DECKS.glob("*/reports/*.md")):

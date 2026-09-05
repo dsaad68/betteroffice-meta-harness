@@ -1,3 +1,9 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+# harness-component: scripts
+# harness-version: 1.0.0
 """Shared paths and helpers for the render improvement harness."""
 
 from __future__ import annotations

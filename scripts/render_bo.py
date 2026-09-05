@@ -1,9 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["click>=8.1"]
+# ///
+# harness-component: scripts
+# harness-version: 1.0.0
 """Render the candidate images with betteroffice-pptx into decks/<id>/bo-img/NN.png."""
 
 from __future__ import annotations
 
-import argparse
+import click
 import json
 import shutil
 import sys
@@ -81,7 +87,11 @@ def render(deck_id: str) -> None:
     print(f"{deck_id}: {len(list(out.glob('*.png')))}/{len(deck)} BetterOffice image(s)")
 
 
+@click.command(help=__doc__)
+@click.argument("deck_id")
+def main(deck_id: str) -> None:
+    render(deck_id)
+
+
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("deck_id")
-    render(ap.parse_args().deck_id)
+    main()
