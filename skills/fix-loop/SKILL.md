@@ -78,6 +78,9 @@ Give each agent a distinct slug. Two agents cutting the same branch name will co
 For each agent that reports back, in `order.py plan` order:
 
 1. Read its `issue.md`, `pr.md` and diff. Check the claim in `pr.md` against what the diff does.
+   If the change alters what is drawn and there is no `Before/After:` section, check yourself whether
+   a publishable deck reproduces it before accepting "no evidence" — agents default to that answer
+   too readily. Host any evidence image on the evidence branch and rewrite the link before filing.
 2. File the issue with `gh issue create`. Record the number.
 3. Create the `main`-based branch, apply the fix, **run the tests yourself**, push. The agent's
    worktree is on the run's pinned base, which is usually not `main`: expect to drop files for

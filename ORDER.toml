@@ -264,6 +264,7 @@ pr = 283
 id = "unsupported-table-not-rendered"
 title = "DrawingML tables (a:tbl) not rendered at all"
 status = "todo"
+reason = "Kept deliberately: likely shared beyond pptx. a:tbl is DrawingML, the chart work already reaches into xlsx-render and docx-layout, and a table primitive would most naturally live in a shared crate. Worth scoping against the xlsx and docx renderers before starting, not treating as a pptx-only fix."
 [fix.meta]
 report = "render-improvement-harness/issues/unsupported-table-not-rendered/report.md"
 evidence = ["render-improvement-harness/issues/unsupported-table-not-rendered/evidence-1.png", "render-improvement-harness/issues/unsupported-table-not-rendered/evidence-2.png", "render-improvement-harness/issues/unsupported-table-not-rendered/evidence-3.png", "render-improvement-harness/issues/unsupported-table-not-rendered/evidence-4.png"]
@@ -329,6 +330,8 @@ solution = "render-improvement-harness/issues/transform-text-orientation-wrong-u
 id = "line-stroke-color-resolution-broken"
 title = "Connector/line stroke color not resolved from style or gradFill"
 status = "todo"
+needs = ["theme-style-references"]
+reason = "needs a:lnRef parsed and a:fmtScheme/a:lnStyleLst read into Theme, which today carries only name, color_scheme and font_scheme. Built independently it would reimplement all of that and conflict at merge, so it branches from #253 rather than the run base."
 [fix.meta]
 report = "render-improvement-harness/issues/line-stroke-color-resolution-broken/report.md"
 evidence = ["render-improvement-harness/issues/line-stroke-color-resolution-broken/evidence-1.png", "render-improvement-harness/issues/line-stroke-color-resolution-broken/evidence-2.png", "render-improvement-harness/issues/line-stroke-color-resolution-broken/evidence-3.png", "render-improvement-harness/issues/line-stroke-color-resolution-broken/evidence-4.png"]
@@ -458,7 +461,8 @@ solution = "render-improvement-harness/issues/unsupported-custgeom-picturefill-w
 [[fix]]
 id = "transform-group-child-rotation-scale-wrong"
 title = "Group child rotation + anisotropic scale computed wrong"
-status = "todo"
+status = "blocked"
+reason = "Not a defect: its own report concludes the group child transform is already correct and the finding is a custGeom shape drawn as its bounding box. Fold the finding into geometry-custom-collapses-to-bbox and close; do not fix."
 [fix.meta]
 report = "render-improvement-harness/issues/transform-group-child-rotation-scale-wrong/report.md"
 evidence = ["render-improvement-harness/issues/transform-group-child-rotation-scale-wrong/evidence-1.png", "render-improvement-harness/issues/transform-group-child-rotation-scale-wrong/evidence-2.png", "render-improvement-harness/issues/transform-group-child-rotation-scale-wrong/evidence-3.png"]

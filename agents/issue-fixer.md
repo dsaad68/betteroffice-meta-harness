@@ -110,9 +110,23 @@ Then report back: what you changed, what you measured, what you could not do.
 ## Rules
 
 - **Never `gh`, never push, never rebase.** Leave the branch where it is.
-- **Do not claim a screenshot you cannot publish.** Evidence may come only from decks whose slides
-  carry placeholder content — never a third-party presentation, and never a slide showing a person's
-  name, student number or contact details.
+- **Produce a before/after render, and only say you cannot when that is actually true.** A pull
+  request that changes what is drawn should show it. The rule is about the *deck*, not about
+  screenshots in general: evidence may come only from decks whose slides carry placeholder content —
+  never a third-party presentation, and never a slide showing a person's name, student number or
+  contact details.
+
+  Publishable decks in the corpus, all PowerPoint design templates: `stacked-bar`, `swot-analysis`,
+  `green-solutions`, `minimal-chart`, and everything with a `tpl-` prefix. **Check whether one of
+  them reproduces your defect before concluding you have no evidence** — grep their extracted XML
+  under `render-improvement-harness/decks/<id>/xml/` for the element you are fixing. Several
+  clusters list only third-party decks in their report while a template exercises the same code.
+
+  To make one: render the affected slide with your engine, then build a three-pane image —
+  `decks/<id>/lo-img/NN.png` as the reference, `decks/<id>/bo-img/NN.png` as before, your render as
+  after — and save it into your drafts folder as `evidence-<slide>.png`. Name it in `pr.md` as a
+  `Before/After:` section; the publishing session hosts it and rewrites the link. If no publishable
+  deck reproduces the defect, say so explicitly and say which decks do.
 - **Say what you left out.** A crate that is not on `main`, a half of the cluster you did not do, an
   edge case you could not test: write it down rather than letting a reviewer find it.
 - **One cluster.** If you find a second defect, note it in `NOTES.md`; do not fix it.
