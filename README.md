@@ -91,6 +91,12 @@ it was [added upstream](https://github.com/openooxml/betteroffice/pull/264) as p
 precisely so the renderer could be measured. It is what makes the candidate side of the diff
 possible, and every fix in the loop is verified through it.
 
+It currently lives on that branch and is expected to merge shortly, so `crates/pptx-raster` is not on
+`main` yet. Two consequences while that holds: a fix worktree must be cut from the rasterizer branch
+to render anything at all, and a fix that touches the raster backend ships in two parts — the half
+`main` can take now, and the raster half once #264 lands. Both the skill and the fixer agent say so;
+delete this paragraph when it merges.
+
 Both sides render at 96 dpi with Liberation, Carlito and Caladea aliased to the metric-compatible
 Microsoft families, so text is shaped with the same metrics on both sides and a diff means a
 layout difference rather than a font difference.
