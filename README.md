@@ -37,11 +37,22 @@ flowchart TD
     J --> K[clusters.json]
     K --> L[issue-investigator<br/>one agent per cluster]
     L --> M[report.md + possible-solution.md]
-    M --> N[GitHub issue]
-    N --> O[fix in a worktree]
-    O --> P[verify_fix.py<br/>before / after / reference]
-    P --> Q[pull request]
+    M --> N[ORDER.toml<br/>the plan: what depends on what]
+    N --> O["issue-fixer<br/>up to 3, each its own worktree"]
+    O --> P["sem impact<br/>what else does this touch?"]
+    P --> Q[verify_fix.py<br/>before / after / reference]
+    Q --> R[GitHub issue + pull request]
+    R --> S[write the numbers back<br/>into ORDER.toml]
+    S --> T{merged?}
+    T -->|review comments| U[review-responder<br/>one agent per pull request]
+    U --> R
+    T -->|yes| V[status = merged<br/>wt remove the worktree]
+    V --> N
 ```
+
+The loop closes: `ORDER.toml` is both what the dispatcher reads to pick the next cluster and what
+it writes back once a pull request is filed or merged. Left un-updated it goes stale within a day,
+and `order.py ready` starts hiding work that is already unblocked.
 
 Stages 1–5 are deterministic scripts. The judgement stages are subagents, because "what is wrong
 with this slide" and "are these two findings the same defect" are not things a diff can answer.
@@ -63,6 +74,14 @@ gitignored build cache, the Python environment and the sample decks are reflink-
 Python binding is rebuilt to resolve inside that worktree rather than the one the copied environment
 came from. The hooks run in the background, so an agent verifies the binding before it trusts a
 measurement.
+
+Before a fixer scopes its change it asks what else the change touches. The pptx crates share
+`ooxml-drawingml`, `ooxml-text` and `opc` with docx and xlsx, so `sem impact` on the function about
+to be edited catches the case where a fix that reads as local is not — a preset-geometry change
+reaches `crates/docx-parse`. Once a pull request is open, `review-responder` works its threads the
+same way the fixers work clusters: one agent per pull request, verifying each comment against the
+code, and never publishing. When a pull request merges, its worktree goes with `wt remove`; each
+carries 15-20 GB of build cache, and forty clusters fill a disk.
 
 Ownership is split the same way. `ORDER.toml` is the plan and has exactly one writer, the
 dispatching session; `scripts/order.py` computes the merge order from it and renders the issue body,
