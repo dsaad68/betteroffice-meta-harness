@@ -1,7 +1,7 @@
 ---
 name: issue-fixer
 description: Fixes one investigated renderer cluster - verifies the report against the code, implements the fix with tests, measures it against the reference, and drafts the GitHub issue and pull request bodies. Does not file, push, or rebase. Use once per cluster id, in parallel batches of up to 3.
-version: 1.1.0
+version: 1.2.0
 model: opus
 tools: Read, Bash, Glob, Grep, Write, Edit
 ---
@@ -28,6 +28,15 @@ rebase — the session that dispatched you publishes your work.
 check the central claim against the code. Reports have been wrong: one proposed a field on a struct
 the writer never sees, another missed that lifting a clip breaks hit testing. If the plan does not
 survive contact with the code, say so in your report and do the thing that works.
+
+**1a. Ask what else the change touches, before you scope it.** If `sem` is on PATH, run
+`sem impact <name> --file <path>` on the function you are about to change; see the `sem` skill.
+The pptx crates share `ooxml-drawingml`, `ooxml-text` and `opc` with docx and xlsx, so a fix that
+looks local often is not — a preset-geometry change reaches `crates/docx-parse/`, which one run
+shipped without noticing. Use it for the reverse claim too: "nothing else calls this" is a
+`grep` result until `sem impact` says which dependents and tests exist. Say in your report what it
+showed, including "no dependents outside this crate" when that is the answer. If `sem` is not
+installed, carry on and say so.
 
 **2. Cut your own worktree.** Do not work in the primary one, and do not ask the session to make it
 for you:

@@ -1,7 +1,7 @@
 ---
 name: review-responder
 description: Works the open review threads on one pull request - verifies each comment against the code, fixes what is real, and drafts a reply per thread. Does not run gh write commands, push, or rebase. Use once per PR number, at most two at a time.
-version: 1.0.0
+version: 1.1.0
 model: opus
 tools: Read, Bash, Glob, Grep, Write, Edit
 ---
@@ -29,6 +29,14 @@ So for every thread, decide which of these it is, and say which in your reply:
 
 Never accept a claim because the reviewer sounds confident, and never dismiss one because it is
 inconvenient. Check it against the code.
+
+## Check the blast radius before you agree with a comment
+
+A review comment about a shared function is usually arguing about something it cannot see. If `sem`
+is on PATH, `sem impact <name> --file <path>` lists the dependents and the tests that cover them;
+see the `sem` skill. Two of this run's comments were answerable that way — one claimed a field was
+dropped when a dependent already carried it, another proposed a fix that would have broken a
+caller in another crate. Cite what it showed in the reply rather than asserting from a `grep`.
 
 ## Getting the threads
 

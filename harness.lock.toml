@@ -9,26 +9,28 @@
 # Bump `release` when any component changes. Components carry the release they were last changed
 # in, so a glance shows what moved.
 
-release = "1.1.0"
+release = "1.2.0"
 released = "2026-09-07"
 
 [requires]
 python = ">=3.11"
 uv = ">=0.5"          # PEP 723 inline script metadata
 gh = ">=2.0"          # filing issues and pull requests, and reconciling the plan against them
+sem = ">=0.24"        # optional: entity-level impact analysis. Nothing fails without it.
 wt = ">=0.76"         # worktrunk, for per-agent worktrees and for removing them once merged
 
 [skills]
 render-harness = "1.0.0"
 fix-loop = "1.1.0"        # 1.1.0: record filings in ORDER.toml as you go; wt remove after a merge
 property-testing = "1.0.0"
+sem = "1.0.0"              # vendored from Ataraxy-Labs/sem @ 4210e1df5c7b, MIT OR Apache-2.0
 
 [agents]
 slide-comparator = "1.0.0"
 failure-taxonomist = "1.0.0"
 issue-investigator = "1.0.0"
-issue-fixer = "1.1.0"     # 1.1.0: the comment rule is checkable, not advisory
-review-responder = "1.0.0"
+issue-fixer = "1.2.0"     # 1.2.0: impact-check a shared function before scoping the fix
+review-responder = "1.1.0"  # 1.1.0: impact-check before agreeing with a comment
 property-tester = "1.0.0"
 
 [scripts]
@@ -50,5 +52,7 @@ scripts = "^1.0.0"
 # fix-loop reads the issue folders render-harness produces, so it needs that skill's output shape.
 skills = ["render-harness ^1.0.0"]
 
-# property-testing and property-tester are deliberately standalone: no skill or script calls them,
-# and they are listed above only so check_versions.py can account for the files on disk.
+# property-testing, property-tester and sem are deliberately standalone: no skill or script calls
+# them, and they are listed above only so check_versions.py can account for the files on disk.
+# sem is vendored from upstream — re-vendor it rather than editing, and move the pinned commit in
+# skills/sem/SKILL.md when you do.
