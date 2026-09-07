@@ -4,7 +4,7 @@
 # dependencies = ["click>=8.1"]
 # ///
 # harness-component: scripts
-# harness-version: 1.0.0
+# harness-version: 1.1.0
 """Check that every component's declared version matches harness.lock.toml."""
 
 from __future__ import annotations
@@ -56,14 +56,20 @@ def main() -> None:
         for missing in sorted(set(expected) - seen):
             problems.append(f"[{kind}] {missing}: in the lock but not on disk")
 
+    # `all` is the default; a script that versions on its own gets a key of its own stem.
+    scripts = lock["scripts"]
     for path in sorted((ROOT / "scripts").glob("*.py")):
+        expected = scripts.get(path.stem, scripts["all"])
         version = declared_header(path)
         if version is None:
             problems.append(f"{path.relative_to(ROOT)}: no `# harness-version:` header")
-        elif version != lock["scripts"]["all"]:
+        elif version != expected:
             problems.append(
-                f"{path.relative_to(ROOT)}: declares {version}, lock says {lock['scripts']['all']}"
+                f"{path.relative_to(ROOT)}: declares {version}, lock says {expected}"
             )
+    for name in sorted(set(scripts) - {"all"}):
+        if not (ROOT / "scripts" / f"{name}.py").exists():
+            problems.append(f"[scripts] {name}: in the lock but not on disk")
 
     if problems:
         for problem in problems:

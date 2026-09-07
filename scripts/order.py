@@ -4,7 +4,7 @@
 # dependencies = ["click>=8.1"]
 # ///
 # harness-component: scripts
-# harness-version: 1.0.0
+# harness-version: 1.2.0
 """Query a fix run's ORDER.toml: dependencies, what is ready, the merge order, the issue body."""
 
 from __future__ import annotations
@@ -33,6 +33,8 @@ class Entry:
     repairs: list[str] = field(default_factory=list)
     supersedes: list[str] = field(default_factory=list)
     meta: dict = field(default_factory=dict)
+    scope: str = ""
+    commit: str = ""
 
     @property
     def hard(self) -> list[str]:
@@ -44,8 +46,13 @@ class Entry:
         return [*self.needs, *self.repairs, *self.after]
 
     def label(self) -> str:
+        """The PR's name: the conventional-commit title when the run declares a scope."""
         pr = self.meta.get("pr")
-        return f"{self.title or self.id}{f' — #{pr}' if pr else ''}"
+        name = self.title or self.id
+        if self.scope and self.title:
+            kind = self.commit or ("feat" if self.kind == "feature" else "fix")
+            name = f"`{kind}({self.scope}): {name}`"
+        return f"{name}{f' — #{pr}' if pr else ''}"
 
 
 def load(path: Path) -> tuple[dict, dict[str, Entry]]:
@@ -53,6 +60,7 @@ def load(path: Path) -> tuple[dict, dict[str, Entry]]:
         sys.exit(f"{path} not found")
     raw = tomllib.loads(path.read_text())
     entries: dict[str, Entry] = {}
+    scope = raw.get("scope", "")
     for kind in ("fix", "feature"):
         for item in raw.get(kind, []):
             item = dict(item)
@@ -62,8 +70,9 @@ def load(path: Path) -> tuple[dict, dict[str, Entry]]:
             if ident in entries:
                 sys.exit(f"duplicate id {ident!r}: ids are unique across [[fix]] and [[feature]]")
             meta = item.pop("meta", {})
-            entries[ident] = Entry(id=ident, kind=kind, meta=meta,
-                                   **{k: v for k, v in item.items() if k in Entry.__annotations__})
+            fields = {k: v for k, v in item.items()
+                      if k in Entry.__annotations__ and k != "scope"}
+            entries[ident] = Entry(id=ident, kind=kind, meta=meta, scope=scope, **fields)
     return raw, entries
 
 
@@ -265,12 +274,14 @@ def check(path: Path | None) -> None:
 def issue(path: Path | None) -> None:
     raw, entries = load(order_file(path))
     # Only what is actually open: an entry with no pull request is backlog, not a merge step.
-    sequence = [e for e in ordered(entries) if e.status != "blocked" and e.meta.get("pr")]
+    sequence = [e for e in ordered(entries)
+                if e.status not in ("blocked", "merged") and e.meta.get("pr")]
     print(f"{len(sequence)} pull requests are open against this run and several of them interact. "
           "This is the order I would merge them in and why.\n")
     print("Generated from `ORDER.toml`; edit that rather than this issue.\n")
     if base := raw.get("base"):
-        print(f"Every branch cuts from `{base[:12]}`.\n")
+        print(f"Every branch cuts from `{base[:12]}` unless a step below names something "
+              "it depends on, in which case it is stacked on that branch instead.\n")
     print("---\n")
     for step, entry in enumerate(sequence, 1):
         print(f"### Step {step}. {entry.label()}\n")

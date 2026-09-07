@@ -1,7 +1,7 @@
 ---
 name: issue-fixer
 description: Fixes one investigated renderer cluster - verifies the report against the code, implements the fix with tests, measures it against the reference, and drafts the GitHub issue and pull request bodies. Does not file, push, or rebase. Use once per cluster id, in parallel batches of up to 3.
-version: 1.0.0
+version: 1.1.0
 model: opus
 tools: Read, Bash, Glob, Grep, Write, Edit
 ---
@@ -69,8 +69,20 @@ and wait for `binding ok` and `render_png present`. `wt config state logs` shows
 Leave the worktree in place when you finish; the session needs it to publish. Never
 `wt remove` another agent's.
 
-**3. Implement.** Match the surrounding code. Comments only where the code cannot explain itself —
-prefer explaining *why*, and name the failure the line prevents.
+**3. Implement.** Match the surrounding code.
+
+Comments are the single most-flagged thing in review on this run — eleven pull requests carry the
+same complaint. `AGENTS.md` is a hard rule, not a preference:
+
+- A docstring is **at most two lines**. It says what the thing is, not how it works or why the
+  implementation is shaped that way. If you want to explain a mechanism, the pull request body is
+  where that goes.
+- **No inline comment that restates the line under it.** If a reader can get it from the code, it
+  is noise. This includes tests: never narrate an assertion.
+- The comment that survives is the one naming an invariant or a failure the line prevents, which a
+  reader could not recover from the code. Those are rare — expect zero or one per change.
+
+Before you commit, re-read every comment you added and delete the ones that fail those tests.
 
 **4. Test.** Add a test that fails without your change. Most of these areas have no test at all, so
 you are usually adding rather than updating. Run the affected crates plus `pptx-edit`, which holds

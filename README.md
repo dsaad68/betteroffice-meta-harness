@@ -93,8 +93,8 @@ from it.
 | path | what it is |
 |---|---|
 | `scripts/` | the deterministic pipeline — register a deck, render both sides, extract XML, diff, collect, index, verify a fix, file an issue |
-| `agents/` | the subagents: per-slide comparator, taxonomist, per-cluster investigator, per-cluster fixer |
-| `skills/` | the skills that drive the loop — `render-harness` to find defects, `fix-loop` to fix them |
+| `agents/` | the subagents: per-slide comparator, taxonomist, per-cluster investigator, per-cluster fixer, review responder, property tester |
+| `skills/` | the skills that drive the loop — `render-harness` to find defects, `fix-loop` to fix them, `property-testing` standalone |
 | `templates/` | the report and issue shapes the agents fill in |
 | `docs/` | the dependency-ordered fix plan, the fix loop, and the failure taxonomy |
 | `harness.lock.toml` | the compatible set of skill, agent and script versions |

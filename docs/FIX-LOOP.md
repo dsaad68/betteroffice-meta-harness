@@ -12,8 +12,10 @@ Only two pieces here are new. Everything else is a command that already exists.
 Take the next issue from `FIX-PLAN.md` whose predecessors have landed and whose track has nothing
 in flight. Tracks are independent; order inside a track is not.
 
-Landed state is the one thing nothing records yet. `issues/github-issues.json` tracks what has
-been filed, not what has merged, so for now keep that by hand or extend that file.
+`ORDER.toml` records landed state: an entry is `merged` once its pull request is in. It only stays
+true if you reconcile it — ask GitHub what merged and update the entries before selecting, or
+`order.py ready` will hide work that is already unblocked. Filing writes the numbers back the same
+way; see `skills/fix-loop/SKILL.md` §3 and §3a.
 
 ### 2. File the issue
 

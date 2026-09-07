@@ -2,34 +2,42 @@
 #
 # Every component declares its own version — skills and agents in their frontmatter, scripts in a
 # `# harness-version:` header line. This file is the compatible set. `scripts/check_versions.py`
-# fails if a declaration and this file disagree, so drift is caught rather than discovered.
+# fails if a declaration and this file disagree, so drift is caught rather than discovered. It also
+# fails on a component that is on disk but absent here, which is why every file present is listed
+# even when nothing depends on it.
 #
 # Bump `release` when any component changes. Components carry the release they were last changed
 # in, so a glance shows what moved.
 
-release = "1.0.0"
-released = "2026-09-05"
+release = "1.1.0"
+released = "2026-09-07"
 
 [requires]
 python = ">=3.11"
 uv = ">=0.5"          # PEP 723 inline script metadata
-gh = ">=2.0"          # only for filing issues and pull requests
-wt = ">=0.76"         # worktrunk, for per-agent worktrees
+gh = ">=2.0"          # filing issues and pull requests, and reconciling the plan against them
+wt = ">=0.76"         # worktrunk, for per-agent worktrees and for removing them once merged
 
 [skills]
 render-harness = "1.0.0"
-fix-loop = "1.0.0"
+fix-loop = "1.1.0"        # 1.1.0: record filings in ORDER.toml as you go; wt remove after a merge
+property-testing = "1.0.0"
 
 [agents]
 slide-comparator = "1.0.0"
 failure-taxonomist = "1.0.0"
 issue-investigator = "1.0.0"
-issue-fixer = "1.0.0"
+issue-fixer = "1.1.0"     # 1.1.0: the comment rule is checkable, not advisory
+review-responder = "1.0.0"
+property-tester = "1.0.0"
 
 [scripts]
 # All scripts move together: they share `common.py` and the on-disk layout, so a change to one
-# deck or issue path affects every one of them.
+# deck or issue path affects every one of them. `order.py` is the exception — it owns ORDER.toml
+# and nothing else reads it, so it versions on its own.
 all = "1.0.0"
+order = "1.2.0"           # 1.2.0: scope/commit fields, and merged entries drop out of the sequence
+check_versions = "1.1.0"  # 1.1.0: honours a per-script version key
 
 # What each skill needs. A skill may run with newer components only if the major version matches.
 [compatibility.render-harness]
@@ -37,7 +45,10 @@ agents = ["slide-comparator", "failure-taxonomist", "issue-investigator"]
 scripts = "^1.0.0"
 
 [compatibility.fix-loop]
-agents = ["issue-fixer"]
+agents = ["issue-fixer", "review-responder"]
 scripts = "^1.0.0"
 # fix-loop reads the issue folders render-harness produces, so it needs that skill's output shape.
 skills = ["render-harness ^1.0.0"]
+
+# property-testing and property-tester are deliberately standalone: no skill or script calls them,
+# and they are listed above only so check_versions.py can account for the files on disk.
