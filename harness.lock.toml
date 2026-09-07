@@ -9,7 +9,7 @@
 # Bump `release` when any component changes. Components carry the release they were last changed
 # in, so a glance shows what moved.
 
-release = "1.3.0"
+release = "1.4.0"
 released = "2026-09-07"
 
 # scripts/install_tools.sh reads the versions below rather than repeating them, so a bump here

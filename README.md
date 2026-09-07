@@ -70,6 +70,27 @@ so that body is generated rather than hand-maintained. `TODO.md` is the shared s
 write to as they work, and the session folds it back into the plan as it publishes. `LEARNING.md` is appended to across runs, because most of what
 goes wrong is knowledge that existed only in the last agent's head.
 
+## Setting it up
+
+```
+git clone https://github.com/dsaad68/betteroffice-meta-harness
+cd betteroffice-meta-harness
+./scripts/bootstrap.sh                                   # what it would do, changing nothing
+./scripts/bootstrap.sh --install --fork https://github.com/<you>/betteroffice
+```
+
+That checks the tools, clones what is missing, installs the skills and agents where the agent
+runtime looks for them, and verifies nothing drifted. It plans by default and changes nothing until
+`--install`, so reading the plan is a fine substitute for trusting it. Re-running is safe: it skips
+what is in place and warns before overwriting a skill you have edited.
+
+You end up with three checkouts side by side — this repo, your fork of BetterOffice, and
+[`pptx-pdf`](https://github.com/dsaad68/pptx-pdf) built in place as the reference renderer. Nothing
+can be compared without that last one, which is why bootstrap builds it rather than assuming it.
+
+**Decks are yours to supply.** `./scripts/add_deck.py <deck.pptx> --id <name>` registers one.
+`./scripts/install_tools.sh --check` exits non-zero if a prerequisite is missing, for CI.
+
 ## Running it
 
 Every script is a self-contained [uv](https://docs.astral.sh/uv/) script: the PEP 723 header names
@@ -113,11 +134,8 @@ it was [added upstream](https://github.com/openooxml/betteroffice/pull/264) as p
 precisely so the renderer could be measured. It is what makes the candidate side of the diff
 possible, and every fix in the loop is verified through it.
 
-It currently lives on that branch and is expected to merge shortly, so `crates/pptx-raster` is not on
-`main` yet. Two consequences while that holds: a fix worktree must be cut from the rasterizer branch
-to render anything at all, and a fix that touches the raster backend ships in two parts — the half
-`main` can take now, and the raster half once #264 lands. Both the skill and the fixer agent say so;
-delete this paragraph when it merges.
+That has since merged, so `crates/pptx-raster` is on `main` and a fix worktree cut from `main` can
+render both sides.
 
 Both sides render at 96 dpi with Liberation, Carlito and Caladea aliased to the metric-compatible
 Microsoft families, so text is shaped with the same metrics on both sides and a diff means a

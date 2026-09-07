@@ -12,29 +12,41 @@ installed.
 
 ## Setup
 
-You need three checkouts side by side:
-
-    ~/GitHub/betteroffice-meta-harness   this repo
-    ~/GitHub/fork/betteroffice           your fork of openooxml/betteroffice
-    ~/GitHub/pptx-pdf                    the reference renderer
+One command, from a fresh clone of this repo:
 
     git clone https://github.com/dsaad68/betteroffice-meta-harness
-    git clone https://github.com/<you>/betteroffice        ~/GitHub/fork/betteroffice
-    git clone https://github.com/dsaad68/pptx-pdf          ~/GitHub/pptx-pdf
-    cd ~/GitHub/pptx-pdf && cargo build --release
+    cd betteroffice-meta-harness
+    ./scripts/bootstrap.sh                                   # what it would do, changing nothing
+    ./scripts/bootstrap.sh --install --fork https://github.com/<you>/betteroffice
 
-Tools: `uv`, `gh` (authenticated), `wt` (worktrunk), a Rust toolchain, and `bun` if you touch the
-TypeScript renderer. `scripts/common.py` holds the paths — change them there, not in each script.
+It checks the tools, clones what is missing, installs the skills and agents where the agent runtime
+looks for them, copies the scripts into the fork, and verifies nothing drifted. It is safe to
+re-run: it skips what is in place, and warns before overwriting a skill or agent you have edited
+locally rather than clobbering it. `--fork` takes a path if you already have a checkout.
 
-Install the skills and agents where your agent runtime looks for them. For Claude Code that is the
-target repo's `.claude/`:
+What it sets up — three checkouts side by side:
 
-    cp -r skills/*  ~/GitHub/fork/betteroffice/.claude/skills/
-    cp    agents/*  ~/GitHub/fork/betteroffice/.claude/agents/
+    ~/GitHub/betteroffice-meta-harness   this repo: the method, the scripts, the agents
+    ~/GitHub/fork/betteroffice           your fork of openooxml/betteroffice: the code under test
+    ~/GitHub/pptx-pdf                    the reference renderer, built with `cargo build --release`
 
-Then check nothing has drifted:
+Tools, all checked by `scripts/install_tools.sh` (which `bootstrap.sh` calls, and which reads its
+required versions out of `harness.lock.toml` so the two cannot drift):
 
-    ./scripts/check_versions.py
+    python >= 3.11   uv >= 0.5   gh >= 2.0 (authenticated)   a Rust toolchain
+    wt >= 0.76       worktrunk, for per-agent worktrees
+    sem >= 0.24      optional — entity-level impact analysis; nothing fails without it
+    pptx-pdf         the reference renderer. Not a package: a checkout built in place, at the
+                     path common.py expects. Nothing can be compared without it.
+
+Add `bun` if you touch the TypeScript renderer. `scripts/common.py` holds the paths — change them
+there, not in each script.
+
+**You supply the decks.** This repo carries none and never will: they are third-party copyrighted
+files, and renders of them stay on the machine that made them. `scripts/add_deck.py` registers one.
+
+To install by hand instead, or to see exactly what bootstrap does, run it without `--install` — the
+plan it prints is the whole of it.
 
 ## Running the scripts
 
@@ -49,7 +61,7 @@ Do not run them with a bare `python`: the dependencies will not be there. If one
 another it uses `uv run --script` for the same reason — `sys.executable` would hand the child the
 parent's environment, which does not carry what the child declared.
 
-All ten take `--help`. They use click, so options behave the way you expect.
+All of them take `--help`. They use click, so options behave the way you expect.
 
 ### The candidate renderer
 
@@ -64,7 +76,7 @@ the dependency docs only describe `pyproject.toml`), so either of these resolves
     # dependencies = ["betteroffice-pptx"]
     #
     # [tool.uv.sources]
-    # betteroffice-pptx = { git = "https://github.com/openooxml/betteroffice", branch = "feat/pptx-screenshot", subdirectory = "bindings/python-pptx" }
+    # betteroffice-pptx = { git = "https://github.com/openooxml/betteroffice", branch = "main", subdirectory = "bindings/python-pptx" }
     # ///
 
     # or, against a checkout you already have:
@@ -81,17 +93,13 @@ the script header cannot express "whichever worktree I am comparing right now". 
 when you want a known revision — a one-off measurement against upstream, or reproducing someone
 else's number — and the built local engine the rest of the time.
 
-Note the branch: `render_png` is only on `feat/pptx-screenshot` until #264 merges.
-
 ## The two renderers
 
 **Reference** — `pptx-pdf`, a CLI driving an embedded LibreOffice to PNG at a chosen DPI.
 
 **Candidate** — BetterOffice's own `render_png`. It did not exist when this work started; it was
-added upstream as openooxml/betteroffice#264 precisely so the renderer could be measured. That is
-still on its branch and expected to merge shortly, so `crates/pptx-raster` is not on `main` yet:
-cut fix worktrees from the rasterizer branch, and expect a fix touching the raster backend to ship
-in two parts.
+added upstream as openooxml/betteroffice#264 precisely so the renderer could be measured. That has
+merged, so `crates/pptx-raster` is on `main` and a fix worktree cut from `main` can render.
 
 Both render at 96 dpi with Liberation, Carlito and Caladea aliased to the metric-compatible
 Microsoft families, so a difference means layout, not fonts.
@@ -104,10 +112,17 @@ register and render a deck, fan out one `slide-comparator` per slide, cluster wi
 `possible-solution.md`.
 
 **Fixing them** — skill `fix-loop`:
-build a dependency-ordered `ORDER.md`, fan out `issue-fixer` agents (up to three), then file and
+build a dependency-ordered `ORDER.toml`, fan out `issue-fixer` agents (up to three), then file and
 push serially. Agents cut their own worktrees with `wt` and never call `gh`, never push, never
 rebase — parallel agents that publish will conflict with each other and duplicate analysis when two
 clusters share a cause.
+
+Two habits the loop depends on, both learned the hard way. **Write a filing back into `ORDER.toml`
+as the last step of each entry**, not batched at the end — the plan drifted ten entries behind
+GitHub twice, and `order.py ready` then hides work that is already unblocked. And **`wt remove` a
+branch's worktree once its pull request merges**: each carries 15–20 GB of build cache, forty
+clusters fill a disk, and the failure arrives as a linker error in an unrelated crate rather than
+as "out of space".
 
 `ORDER.toml` has one writer, the dispatching session. It carries the whole backlog — every
 investigated cluster, `todo` until someone takes it — with each entry's report, solution and evidence
@@ -126,6 +141,12 @@ proper size diverges more from a reference whose line breaking differs than the 
 did. A fix landing before its dependency can raise it. And a small correct fix barely moves it —
 removing twelve stray digits from a chart is about 123 pixels on a 1280×720 slide. Judge against the
 issue's own verification section, and look at the render.
+
+**Ask what else a change touches before scoping it.** The pptx crates share `ooxml-drawingml`,
+`ooxml-text` and `opc` with docx and xlsx, so a fix that looks local often is not: `sem impact
+arrow --file crates/ooxml-drawingml/src/geometry.rs` names a dependent in `crates/docx-parse`. A
+preset-geometry fix shipped as a pptx change was a docx change too. The `sem` skill covers it;
+"nothing else calls this" is a `grep` result until something checks.
 
 **An investigation report is a strong prior, not a fact.** They have been wrong: one proposed a
 field on a struct the writer never sees; another missed that lifting a clip breaks hit testing.
