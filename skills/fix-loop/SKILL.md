@@ -1,7 +1,7 @@
 ---
 name: fix-loop
 description: Fix clustered renderer issues in parallel - build a dependency-ordered plan, fan out issue-fixer subagents that investigate, fix, test and draft the issue and pull request, then file and push them serially and update the merge-order issue. Use for "fix the next N issues", "work the fix loop", "fix cluster X".
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Fix loop
@@ -86,42 +86,39 @@ For each agent that reports back, in `order.py plan` order:
    worktree is on the run's pinned base, which is usually not `main`: expect to drop files for
    crates the target branch does not have, and to re-apply anything the base has moved under.
 4. Open the pull request, referencing the issue.
-5. **Write the numbers back into `ORDER.toml` before you move to the next entry.** Set
-   `status = "filed"`, put the issue and pull request numbers in `[fix.meta]`, record the branch,
-   and fold anything the agent left in `TODO.md` into the plan — a discovered dependency, a cluster
-   that turned out to be two, a blocker. Then re-run `order.py check`.
+5. **Write the numbers back, then sweep.** Set `status = "filed"`, put the issue and pull request
+   numbers in `[fix.meta]`, record the branch, and fold anything the agent left in `TODO.md` into
+   the plan — a discovered dependency, a cluster that turned out to be two, a blocker.
 
-   Do this as the last step of each entry, not in a batch at the end. `ORDER.toml` is what tells the
-   next dispatch what is already claimed, and a filing that is not recorded gets worked twice. Two
-   runs drifted ten entries behind GitHub because this was left until later; both times the drift was
-   found by reconciling against `gh pr list`, not by noticing.
+   Then reconcile the whole run in the same breath, because you are already talking to GitHub:
+
+       order.py sync --repo <owner>/<name> --file <run>/ORDER.toml --remove-worktrees
+
+   That asks GitHub the state of every pull request the plan knows about, flips the ones that
+   merged to `status = "merged"`, and runs `wt remove` on their branches. Finally `order.py check`.
+
+   Do this per entry, not batched at the end. Three things go wrong when it is left until later:
+
+   - **A filing you did not record gets worked twice.** `ORDER.toml` is what tells the next dispatch
+     what is already claimed.
+   - **`ready` hides work that is unblocked.** An entry still `filed` whose pull request merged is
+     an unmet dependency as far as the plan is concerned. Two runs drifted ten entries behind
+     GitHub; both times the drift was found by reconciling, not by noticing.
+   - **The disk fills.** Each worktree holds 15-20 GB of build cache. Forty clusters is a full disk,
+     and the failure arrives as a linker error in an unrelated crate rather than as "out of space" —
+     one run lost a verification pass with 1.4 GB left of 926 GB.
+
+   `sync` is conservative by design and will tell you what it did not do:
+
+   - A pull request **closed without merging** is a decision — superseded, rejected, split — so it
+     reports it and changes nothing. Decide by hand.
+   - `wt remove` **refuses a dirty worktree** and `sync` prints why. Look before forcing: an
+     uncommitted change there is either a fix you have not published or evidence you have not
+     copied out.
+   - A worktree whose branch has already been deleted reports `No branch named …`. Remove those
+     with `git worktree remove <path>`; `wt` works by branch.
 
 Do not batch a push with a test run in one command — gate the push on the tests passing.
-
-## 3a. Reconcile and clean up after a merge
-
-`ORDER.toml` says what *this session* did; GitHub says what actually happened. They diverge as soon
-as a maintainer merges something, so before dispatching a new batch:
-
-1. Reconcile. Ask GitHub which pull requests merged and set those entries to `status = "merged"`:
-
-       gh pr list --repo <owner>/<repo> --author <you> --state all --limit 90 \
-         --json number,state --jq '.[]|[.number,.state]|@tsv'
-
-   An entry still `filed` whose pull request merged makes `order.py ready` hide work that is
-   actually unblocked. Reconcile first, then ask what is ready.
-
-2. **Remove the worktree of every merged branch**, from the primary worktree:
-
-       wt remove <branch>
-
-   Its build cache is 15–20 GB. A run of forty clusters fills a disk, and the failure arrives as a
-   linker error in an unrelated crate rather than as "out of space" — one run lost a verification
-   pass to it with 1.4 GB left of 926 GB. Do not remove a worktree whose pull request is still open:
-   a reviewer's comment usually needs the tree it was built in.
-
-   If `wt remove` refuses because the tree is dirty, look before forcing — an uncommitted change
-   there is either a fix you have not published or evidence you have not copied out.
 
 ## 4. Close the run
 

@@ -4,11 +4,15 @@
 # dependencies = ["click>=8.1"]
 # ///
 # harness-component: scripts
-# harness-version: 1.2.0
+# harness-version: 1.3.0
 """Query a fix run's ORDER.toml: dependencies, what is ready, the merge order, the issue body."""
 
 from __future__ import annotations
 
+import json
+import re
+import shutil
+import subprocess
 import sys
 import tomllib
 from dataclasses import dataclass, field
@@ -267,6 +271,92 @@ def check(path: Path | None) -> None:
             print(f"  {problem}")
         sys.exit(f"{len(found)} problem(s)")
     print(f"{len(entries)} entr(ies), no problems")
+
+
+def set_status(path: Path, ident: str, status: str) -> None:
+    """Rewrite one entry's status line in place.
+
+    Line-based on purpose: tomllib cannot write, and a round trip through a TOML writer would
+    reflow the file and drop every comment in it — and the reasons are the point of this file.
+    """
+    lines = path.read_text().split("\n")
+    current = None
+    for index, line in enumerate(lines):
+        if match := re.match(r'^id = "(.+)"$', line):
+            current = match.group(1)
+        elif current == ident and re.match(r"^status = ", line):
+            lines[index] = f'status = "{status}"'
+            path.write_text("\n".join(lines))
+            return
+    sys.exit(f"{ident}: no status line found to update")
+
+
+def gh_states(repo: str) -> dict[int, str]:
+    if not shutil.which("gh"):
+        sys.exit("gh not on PATH; install it or reconcile by hand")
+    result = subprocess.run(
+        ["gh", "pr", "list", "--repo", repo, "--state", "all", "--limit", "200",
+         "--json", "number,state"],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        sys.exit(f"gh pr list failed: {result.stderr.strip()}")
+    return {pr["number"]: pr["state"] for pr in json.loads(result.stdout)}
+
+
+@main.command(help="Reconcile statuses against GitHub, and reclaim merged worktrees.")
+@click.option("--repo", required=True, help="owner/name to ask about the pull requests")
+@click.option("--remove-worktrees", is_flag=True, help="run `wt remove` on merged branches")
+@opt
+def sync(repo: str, remove_worktrees: bool, path: Path | None) -> None:
+    """The plan records what this session did; GitHub records what happened. They diverge the
+    moment a maintainer merges something, and `ready` then hides work that is already unblocked."""
+    order = order_file(path)
+    _, entries = load(order)
+    states = gh_states(repo)
+
+    merged, closed, worktrees = [], [], []
+    seen_branches: set[str] = set()
+    for entry in entries.values():
+        pr = entry.meta.get("pr")
+        if not pr or pr not in states:
+            continue
+        state = states[pr]
+        if state == "MERGED" and entry.status != "merged":
+            set_status(order, entry.id, "merged")
+            merged.append((entry, pr))
+        elif state == "CLOSED" and entry.status not in ("blocked", "merged"):
+            # Closed without merging is a decision, not a status change: superseded, rejected,
+            # or split. Report it and let a person say which.
+            closed.append((entry, pr))
+        # Two entries can share a pull request when one change closes both, so dedupe.
+        if state == "MERGED" and entry.branch and entry.branch not in seen_branches:
+            seen_branches.add(entry.branch)
+            worktrees.append((entry.branch, pr))
+
+    for entry, pr in merged:
+        print(f"  merged   {entry.id} (#{pr})")
+    for entry, pr in closed:
+        print(f"  CLOSED   {entry.id} (#{pr}) — closed unmerged, still `{entry.status}`; decide by hand")
+    if not merged and not closed:
+        print("  nothing to reconcile")
+
+    if not worktrees:
+        return
+    print()
+    for branch, pr in worktrees:
+        if remove_worktrees:
+            result = subprocess.run(["wt", "remove", branch], capture_output=True, text=True)
+            ok = result.returncode == 0
+            # wt prints the reason first and a "try this" hint after; the reason is what matters.
+            said = (result.stderr or result.stdout).strip().splitlines()
+            why = next((line.lstrip("✗ ").strip() for line in said if not line.startswith("↳")), "")
+            print(f"  {'removed ' if ok else 'kept    '} {branch} (#{pr})"
+                  + ("" if ok else f" — {why or 'wt remove failed'}"))
+        else:
+            print(f"  wt remove {branch}   # merged as #{pr}")
+    if not remove_worktrees:
+        print("\n  each worktree holds 15-20 GB of build cache; --remove-worktrees to reclaim them")
 
 
 @main.command(help="The merge-order issue body, rendered.")

@@ -42,17 +42,19 @@ flowchart TD
     O --> P["sem impact<br/>what else does this touch?"]
     P --> Q[verify_fix.py<br/>before / after / reference]
     Q --> R[GitHub issue + pull request]
-    R --> S[write the numbers back<br/>into ORDER.toml]
-    S --> T{merged?}
-    T -->|review comments| U[review-responder<br/>one agent per pull request]
-    U --> R
-    T -->|yes| V[status = merged<br/>wt remove the worktree]
-    V --> N
+    R --> S["order.py sync<br/>ask GitHub what merged"]
+    S --> T["ORDER.toml<br/>this filing, and every state change"]
+    T --> U["wt remove<br/>reclaim merged worktrees"]
+    U --> N
+    R --> V["review-responder<br/>one agent per pull request"]
+    V --> R
 ```
 
-The loop closes: `ORDER.toml` is both what the dispatcher reads to pick the next cluster and what
-it writes back once a pull request is filed or merged. Left un-updated it goes stale within a day,
-and `order.py ready` starts hiding work that is already unblocked.
+The loop closes on `ORDER.toml`: it is what the dispatcher reads to pick the next cluster and what
+it writes back. Filing and reconciling are one step, not two — `order.py sync` asks GitHub the
+state of every pull request the plan knows about, flips the ones that merged, and runs `wt remove`
+on their branches. Left to later the plan goes stale within a day, `order.py ready` starts hiding
+work that is already unblocked, and the worktrees fill the disk at 15-20 GB each.
 
 Stages 1–5 are deterministic scripts. The judgement stages are subagents, because "what is wrong
 with this slide" and "are these two findings the same defect" are not things a diff can answer.
