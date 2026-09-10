@@ -79,6 +79,9 @@ need gh     "$GH_REQ" "$(ver gh --version)"      "$GH_CMD"
 need cargo  ""        "$(ver cargo --version)"   "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
 need wt     "$WT_REQ" "$(ver wt --version)"      "cargo install worktrunk"
 need sem    "$SEM_REQ" "$(ver sem --version)"    "$SEM_CMD" optional
+# Fuzzing is the only thing here that needs nightly, and nothing fails without it.
+need cargo-fuzz "$(want cargo-fuzz)" "$(ver cargo fuzz --version)" \
+  "rustup toolchain install nightly && cargo install cargo-fuzz" optional
 
 # pptx-pdf is the reference renderer. It is a git checkout built in place, not a package, and
 # common.py looks for the release binary at this exact path.
